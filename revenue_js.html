@@ -1,0 +1,37 @@
+<script>
+function initRevenueDashboard() {
+  loadSummary();
+  loadAllTransactions();
+}
+
+function loadSummary() {
+  google.script.run
+    .withSuccessHandler(data => {
+      document.getElementById('revToday').innerText = data.totalRevenueToday.toFixed(2);
+      document.getElementById('revMonth').innerText = data.totalRevenueMonth.toFixed(2);
+      document.getElementById('taxTotal').innerText = data.totalTaxCollected.toFixed(2);
+      document.getElementById('activeBiz').innerText = data.activeBusinesses;
+    })
+    .getRevenueSummary();
+}
+
+function loadAllTransactions() {
+  google.script.run
+    .withSuccessHandler(txns => {
+      const tbody = document.getElementById('revenueTxnList');
+      tbody.innerHTML = '';
+      txns.reverse().forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${new Date(t.DateTime).toLocaleString()}</td>
+          <td>${t.BusinessID}</td>
+          <td>${t.ReceiptNo}</td>
+          <td>${t.Tax.toFixed(2)}</td>
+          <td>${t.Total.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    })
+    .getAllTransactions();
+}
+</script>

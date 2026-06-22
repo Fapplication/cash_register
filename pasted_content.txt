@@ -1,0 +1,229 @@
+Cash Registration Portal (Google Apps Script + Google Sheets)
+System Overview
+Business Users
+Register businesses
+Register items/services
+Record cash sales
+Print receipts
+Generate reports
+Revenue Office Users
+View all transactions from all businesses
+View revenue summaries
+Download reports
+Monitor tax collections
+Administrators
+Manage businesses
+Manage users
+Manage permissions
+System configuration
+Google Spreadsheet Structure
+
+Create one spreadsheet containing the following sheets:
+
+USERS
+UserID	FullName	Username	Password	Role	BusinessID	Status
+
+Roles:
+
+ADMIN
+BUSINESS_OWNER
+CASHIER
+REVENUE_OFFICER
+BUSINESSES
+BusinessID	BusinessName	TIN	LicenseNo	Address	Phone	Email	Status
+ITEMS
+ItemID	BusinessID	ItemCode	ItemName	UnitPrice	TaxRate	Status
+TRANSACTIONS
+TransactionID	ReceiptNo	BusinessID	CashierID	DateTime	Subtotal	Tax	Total
+TRANSACTION_ITEMS
+TransactionID	ItemID	ItemName	Qty	Price	Amount
+AUDIT_LOGS
+LogID	UserID	Action	Description	DateTime
+Portal Modules
+Login
+Username
+Password
+
+After login:
+
+ADMIN            → Admin Dashboard
+BUSINESS_OWNER   → Business Dashboard
+CASHIER          → Cash Register
+REVENUE_OFFICER  → Revenue Dashboard
+Business Dashboard
+
+Features:
+
+Business Profile
+View business information
+Update contact information
+Item Management
+Add item
+Edit item
+Deactivate item
+Sales History
+View sales
+Search receipts
+Reports
+Daily sales
+Monthly sales
+Tax report
+Cash Register Screen
+---------------------------------------
+Cash Register
+---------------------------------------
+
+Item Search
+
+Selected Items
+
+Item         Qty      Price      Total
+
+Laptop        2       1000       2000
+Mouse         3         20         60
+
+Subtotal                 2060
+Tax                       309
+Grand Total              2369
+
+[Complete Sale]
+
+When clicked:
+
+Receipt Number generated
+Transaction saved
+PDF receipt generated
+Revenue dashboard updated
+Receipt Layout
+----------------------------------
+BUSINESS NAME
+TIN: XXXXXXXX
+
+Receipt No: RC-202606220001
+Date: 22-Jun-2026
+
+Item          Qty     Amount
+----------------------------------
+Laptop          2      2000
+Mouse           3        60
+
+Subtotal       2060
+Tax             309
+
+TOTAL          2369
+
+Thank You
+----------------------------------
+Revenue Office Dashboard
+
+Revenue Officers see all business transactions.
+
+KPI Cards
+Total Revenue Today
+
+Total Revenue This Month
+
+Total Tax Collected
+
+Total Transactions
+
+Active Businesses
+Charts
+
+Using Google Charts:
+
+Daily Revenue Trend
+Monthly Revenue Trend
+Top Businesses
+Transaction Monitoring
+Date
+Business
+Receipt No
+Cashier
+Tax
+Total
+
+Search by:
+
+Date
+Business
+Receipt Number
+Security Model
+Revenue Officer
+
+Can:
+
+✅ View all transactions
+
+✅ Download reports
+
+❌ Edit transactions
+
+❌ Delete transactions
+
+❌ Add businesses
+
+Cashier
+
+Can:
+
+✅ Create transaction
+
+❌ Edit completed sale
+
+❌ Delete sale
+
+Business Owner
+
+Can:
+
+✅ View own business transactions
+
+✅ Manage items
+
+❌ View other businesses
+
+PDF Reports
+
+Generate:
+
+Daily Revenue Report
+Date
+Business
+Transactions
+Tax
+Total Revenue
+Monthly Revenue Report
+Business
+Monthly Revenue
+Tax Collected
+
+Export:
+
+PDF
+Excel
+Folder Structure
+CashPortal/
+
+├── Code.gs
+├── Auth.gs
+├── Business.gs
+├── Item.gs
+├── Transaction.gs
+├── Revenue.gs
+├── Reports.gs
+├── Receipt.gs
+
+├── index.html
+├── login.html
+├── dashboard.html
+
+├── css/
+│   └── style.html
+
+├── js/
+│   ├── auth.html
+│   ├── business.html
+│   ├── items.html
+│   ├── transaction.html
+│   └── revenue.html

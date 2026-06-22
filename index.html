@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <?!= include('style'); ?>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Content will be injected here -->
+      <div class="d-flex justify-content-center align-items-center vh-100">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <?!= include('auth_js'); ?>
+    <?!= include('business_js'); ?>
+    <?!= include('items_js'); ?>
+    <?!= include('transaction_js'); ?>
+    <?!= include('revenue_js'); ?>
+    
+    <script>
+      // Global App State
+      const App = {
+        user: JSON.parse(localStorage.getItem('cash_portal_user')) || null,
+        currentPage: 'login',
+        
+        init() {
+          if (this.user) {
+            this.navigateByRole();
+          } else {
+            this.loadPage('login');
+          }
+        },
+        
+        loadPage(pageName, data = {}) {
+          this.currentPage = pageName;
+          google.script.run
+            .withSuccessHandler(html => {
+              document.getElementById('app').innerHTML = html;
+              this.initPageScripts(pageName, data);
+            })
+            .include(pageName + '_content');
+        },
+        
+        navigateByRole() {
+          switch(this.user.role) {
+            case 'ADMIN': this.loadPage('admin_dashboard'); break;
+            case 'BUSINESS_OWNER': this.loadPage('business_dashboard'); break;
+            case 'CASHIER': this.loadPage('cash_register'); break;
+            case 'REVENUE_OFFICER': this.loadPage('revenue_dashboard'); break;
+            default: this.loadPage('login');
+          }
+        },
+        
+        logout() {
+          localStorage.removeItem('cash_portal_user');
+          this.user = null;
+          this.loadPage('login');
+        },
+        
+        initPageScripts(page, data) {
+          if (page === 'login') initLogin();
+          if (page === 'business_dashboard') initBusinessDashboard();
+          if (page === 'cash_register') initCashRegister();
+          if (page === 'revenue_dashboard') initRevenueDashboard();
+        }
+      };
+
+      window.onload = () => App.init();
+    </script>
+  </body>
+</html>
