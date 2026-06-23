@@ -164,7 +164,9 @@ tbody tr:hover td{background:#F8FAFC}
         <button class="btn sm" style="background:#92400E;color:#fff;border-color:#92400E" onclick="saveGasUrl()">Save</button>
       </div>
       <div style="margin-top:6px;font-size:11px;color:#B45309">
-        Deploy your Code.gs as a Web App (Execute as: Me, Who has access: Anyone) to get this URL.
+        In Apps Script: Deploy → New Deployment → Web App.<br>
+        <strong>Execute as: Me &nbsp;|&nbsp; Who has access: Anyone (even anonymous)</strong><br>
+        Copy the <em>/exec</em> URL (not /dev) and paste above.
       </div>
     </div>
 
@@ -298,18 +300,71 @@ const ROLE_ICONS  = {admin:'ti-shield-check',owner:'ti-building-store',cashier:'
 const ROLE_DEFAULTS = {admin:'admin',owner:'owner',cashier:'cashier',officer:'officer'};
 
 // ══════════════════════════════════════════════════════════
-//  API HELPER — all calls go through here
+//  API HELPER — JSONP (bypasses GAS CORS restriction)
+//
+//  Google Apps Script blocks cross-origin POST/fetch calls.
+//  JSONP via dynamic <script> tags is the only reliable
+//  cross-origin technique that works with GAS doGet().
+//
+//  Flow:
+//    1. Serialize request as ?payload=JSON&callback=fn_name
+//    2. Inject a <script src="GAS_URL?..."> tag
+//    3. GAS wraps response: fn_name({...data...});
+//    4. Browser executes it → promise resolves
+//    5. Script tag is cleaned up
 // ══════════════════════════════════════════════════════════
-async function api(action, params = {}) {
-  if (!GAS_URL) throw new Error('Backend URL not configured. Click "Configure URL" below the login form.');
-  const body = { action, token: SESSION?.token || null, params };
-  const res  = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+let _jsonpCounter = 0;
+
+function api(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    if (!GAS_URL) {
+      reject(new Error('Backend URL not configured. Click "Configure URL" below the login form.'));
+      return;
+    }
+
+    // Unique callback name for this call
+    const cbName = '__gasCallback_' + (++_jsonpCounter) + '_' + Date.now();
+
+    // Timeout — reject if GAS doesn't respond in 30s
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Request timed out. Check your GAS URL and deployment settings.'));
+    }, 30000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[cbName];
+      const el = document.getElementById(cbName);
+      if (el) el.remove();
+    }
+
+    // Register global callback — GAS will call this
+    window[cbName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    // Build URL
+    const payload = encodeURIComponent(JSON.stringify({
+      action,
+      token:  SESSION ? SESSION.token : null,
+      params,
+    }));
+    const src = GAS_URL
+      + (GAS_URL.includes('?') ? '&' : '?')
+      + 'payload=' + payload
+      + '&callback=' + cbName;
+
+    // Inject script tag
+    const script = document.createElement('script');
+    script.id  = cbName;
+    script.src = src;
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('Failed to reach the backend. Check your GAS Web App URL.'));
+    };
+    document.head.appendChild(script);
   });
-  if (!res.ok) throw new Error('Server error: ' + res.status);
-  return res.json();
 }
 
 // ══════════════════════════════════════════════════════════
