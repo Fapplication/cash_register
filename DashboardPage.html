@@ -1,0 +1,107 @@
+<!-- Dashboard page fragment — loaded via include('Dashboard') into the shell -->
+<div id="dash-stats">
+
+  <!-- Metric cards -->
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Today's Revenue</div>
+      <div class="metric-value green" id="dash-revenue">Loading…</div>
+      <div class="metric-sub">↑ vs yesterday</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">VAT Collected</div>
+      <div class="metric-value amber" id="dash-vat">—</div>
+      <div class="metric-sub">Standard 15%</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Transactions Today</div>
+      <div class="metric-value blue" id="dash-count">—</div>
+      <div class="metric-sub">All businesses</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Active Businesses</div>
+      <div class="metric-value" id="dash-biz">—</div>
+      <div class="metric-sub">Registered</div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">7-Day Sales Trend</div>
+        <span class="badge blue">This week</span>
+      </div>
+      <div class="bar-chart" id="dash-bars">
+        <div class="loading-overlay" style="padding:20px"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Payment Methods</div></div>
+      <div id="dash-payments">
+        <div class="loading-overlay" style="padding:20px"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Recent transactions -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Recent Transactions</div>
+      <button class="btn sm" onclick="navigate('receipts')">View all <i class="ti ti-arrow-right"></i></button>
+    </div>
+    <div class="table-wrap" id="dash-recent">
+      <div class="loading-overlay"><div class="spinner"></div> Loading transactions…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Called by Dashboard.html → loadDashboard() after stats load.
+// We also load recent transactions independently.
+(function loadRecent() {
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      const wrap = document.getElementById('dash-recent');
+      if (!rows || !rows.length) {
+        wrap.innerHTML = '<div class="empty-state"><i class="ti ti-receipt-off"></i><p>No transactions yet today.</p></div>';
+        return;
+      }
+      const fmt = n => (parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      const payBadge = p => p==='Cash'?'green':p==='Bank Transfer'?'blue':'amber';
+      wrap.innerHTML = `
+        <table>
+          <thead><tr>
+            <th>Receipt No.</th><th>Business</th><th>Cashier</th>
+            <th>Items</th><th>VAT</th><th>Total</th><th>Payment</th><th>Time</th>
+          </tr></thead>
+          <tbody>${rows.slice(0,8).map(r=>`<tr>
+            <td><span class="mono" style="color:#185FA5;cursor:pointer"
+              onclick="viewReceipt('${r.receiptNo}')">${r.receiptNo}</span></td>
+            <td>${r.businessName||r.businessId}</td>
+            <td>${r.cashierName||r.cashierId}</td>
+            <td class="text-muted">—</td>
+            <td>ETB ${fmt(r.tax)}</td>
+            <td style="font-weight:600">ETB ${fmt(r.total)}</td>
+            <td><span class="badge ${payBadge(r.paymentType)}">${r.paymentType}</span></td>
+            <td class="text-muted text-xs">${(r.date||'').slice(11,16)}</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('dash-recent').innerHTML =
+        '<div class="alert danger"><i class="ti ti-alert-circle"></i>'+err.message+'</div>';
+    })
+    .getTransactions(TOKEN, { dateFrom: new Date().toISOString().slice(0,10) });
+})();
+
+function viewReceipt(rno) {
+  navigate('receipts');
+  // After navigation, open receipt detail
+  setTimeout(() => { if(typeof openReceipt==='function') openReceipt(rno); }, 800);
+}
+</script>

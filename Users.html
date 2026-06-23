@@ -1,0 +1,365 @@
+<!-- Users.html — User Management page fragment -->
+<div id="users-page">
+
+  <!-- Add / Edit form panel -->
+  <div class="card" id="user-form-panel" style="display:none">
+    <div class="card-head">
+      <div class="card-title" id="user-form-title">Create New User</div>
+      <button class="btn sm" onclick="closeUserForm()"><i class="ti ti-x"></i> Close</button>
+    </div>
+    <div id="user-form-alert" style="display:none"></div>
+
+    <div class="form-grid cols-2">
+      <div class="field">
+        <label>Full Name <span style="color:#DC2626">*</span></label>
+        <input type="text" id="f-user-name" placeholder="First and last name">
+      </div>
+      <div class="field">
+        <label>Username <span style="color:#DC2626">*</span></label>
+        <input type="text" id="f-user-username" placeholder="login username" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-grid cols-2" style="margin-top:12px">
+      <div class="field">
+        <label>Role <span style="color:#DC2626">*</span></label>
+        <select id="f-user-role" onchange="onRoleChange()">
+          <option value="cashier">Cashier</option>
+          <option value="owner">Business Owner</option>
+          <option value="officer">Revenue Officer</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Phone</label>
+        <input type="text" id="f-user-phone" placeholder="09XX-XXX-XXX">
+      </div>
+    </div>
+    <div class="form-grid cols-2" style="margin-top:12px">
+      <div class="field" id="f-user-biz-field">
+        <label>Assigned Business</label>
+        <select id="f-user-biz">
+          <option value="">— Not assigned —</option>
+        </select>
+        <span class="hint">Required for Cashier and Business Owner roles</span>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="f-user-status">
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid cols-2" style="margin-top:12px">
+      <div class="field">
+        <label id="pw-label">Password <span style="color:#DC2626">*</span></label>
+        <input type="password" id="f-user-password" placeholder="Min 8 characters" autocomplete="new-password">
+        <span class="hint" id="pw-hint">Leave blank to keep existing password (when editing)</span>
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <input type="password" id="f-user-password2" placeholder="Re-enter password" autocomplete="new-password">
+      </div>
+    </div>
+
+    <input type="hidden" id="f-user-id">
+
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn success" onclick="saveUser()">
+        <i class="ti ti-device-floppy"></i> Save User
+      </button>
+      <button class="btn" onclick="closeUserForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Reset password modal -->
+  <div class="modal-backdrop" id="reset-pw-modal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-head">
+        <div class="modal-title">Reset Password</div>
+        <button class="btn sm ghost" onclick="closeResetModal()"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="reset-pw-alert" style="display:none"></div>
+      <div class="field mb-12">
+        <label>User</label>
+        <input type="text" id="reset-user-display" readonly style="background:#F8FAFC">
+      </div>
+      <div class="field mb-12">
+        <label>New Password</label>
+        <input type="password" id="reset-new-pw" placeholder="Min 8 characters">
+      </div>
+      <div class="field">
+        <label>Confirm New Password</label>
+        <input type="password" id="reset-confirm-pw" placeholder="Re-enter">
+      </div>
+      <input type="hidden" id="reset-user-id">
+      <div class="modal-footer">
+        <button class="btn" onclick="closeResetModal()">Cancel</button>
+        <button class="btn primary" onclick="doResetPassword()"><i class="ti ti-key"></i> Reset Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users table -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">System Users</div>
+      <div class="card-actions">
+        <input type="text" id="user-search" placeholder="Search users…"
+          style="width:180px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px"
+          oninput="filterUsers()">
+        <select id="user-role-filter"
+          style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px"
+          onchange="filterUsers()">
+          <option value="">All Roles</option>
+          <option value="admin">Administrator</option>
+          <option value="owner">Business Owner</option>
+          <option value="cashier">Cashier</option>
+          <option value="officer">Revenue Officer</option>
+        </select>
+        <button class="btn primary" onclick="openUserForm()">
+          <i class="ti ti-user-plus"></i> Create User
+        </button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Business</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="users-body">
+          <tr><td colspan="8" style="text-align:center;padding:32px">
+            <div class="spinner" style="margin:0 auto"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let _allUsers = [];
+let _userBizMap = {};
+
+const ROLE_LABELS = { admin:'Administrator', owner:'Business Owner', cashier:'Cashier', officer:'Revenue Officer' };
+const ROLE_BADGES = { admin:'red', owner:'amber', cashier:'green', officer:'blue' };
+
+(function init() {
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      (rows||[]).forEach(b => { _userBizMap[b.id] = b.name; });
+      const sel = document.getElementById('f-user-biz');
+      (rows||[]).forEach(b => { sel.innerHTML += `<option value="${b.id}">${b.name}</option>`; });
+    })
+    .getBusiness(TOKEN);
+
+  loadUsers();
+})();
+
+function loadUsers() {
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      _allUsers = rows || [];
+      renderUsersTable(_allUsers);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('users-body').innerHTML =
+        `<tr><td colspan="8"><div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div></td></tr>`;
+    })
+    .getUsers(TOKEN);
+}
+
+function initials(name) {
+  return (name||'?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+function renderUsersTable(rows) {
+  const tbody = document.getElementById('users-body');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8">
+      <div class="empty-state"><i class="ti ti-users-off"></i><p>No users found.</p></div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar">${initials(r.name)}</div>
+        <span style="font-weight:500">${r.name}</span>
+      </div>
+    </td>
+    <td class="mono text-xs text-muted">${r.username}</td>
+    <td><span class="badge ${ROLE_BADGES[r.role]||'gray'}">${ROLE_LABELS[r.role]||r.role}</span></td>
+    <td class="text-xs text-muted">${_userBizMap[r.businessId] || '—'}</td>
+    <td class="text-xs">${r.phone||'—'}</td>
+    <td><span class="badge ${r.status==='Active'?'green':'red'} dot">${r.status}</span></td>
+    <td class="text-xs text-muted">${(r.createdAt||'').slice(0,10)}</td>
+    <td style="display:flex;gap:6px;flex-wrap:nowrap">
+      <button class="btn sm" onclick="editUser(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <i class="ti ti-edit"></i>
+      </button>
+      <button class="btn sm" onclick="openResetModal('${r.id}','${r.name}')">
+        <i class="ti ti-key"></i> Reset PW
+      </button>
+    </td>
+  </tr>`).join('');
+}
+
+function filterUsers() {
+  const q    = document.getElementById('user-search').value.toLowerCase();
+  const role = document.getElementById('user-role-filter').value;
+  renderUsersTable(_allUsers.filter(r =>
+    (!q    || (r.name||'').toLowerCase().includes(q) || (r.username||'').toLowerCase().includes(q)) &&
+    (!role || r.role === role)
+  ));
+}
+
+function openUserForm() {
+  clearUserForm();
+  document.getElementById('user-form-title').textContent = 'Create New User';
+  document.getElementById('pw-hint').style.display = 'none';
+  document.getElementById('user-form-panel').style.display = 'block';
+  document.getElementById('user-form-panel').scrollIntoView({ behavior:'smooth' });
+}
+
+function closeUserForm() {
+  document.getElementById('user-form-panel').style.display = 'none';
+  clearUserForm();
+}
+
+function clearUserForm() {
+  ['f-user-id','f-user-name','f-user-username','f-user-phone',
+   'f-user-password','f-user-password2'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-user-role').value   = 'cashier';
+  document.getElementById('f-user-biz').value    = '';
+  document.getElementById('f-user-status').value = 'Active';
+  document.getElementById('user-form-alert').style.display = 'none';
+  onRoleChange();
+}
+
+function editUser(r) {
+  document.getElementById('user-form-title').textContent  = 'Edit User';
+  document.getElementById('f-user-id').value       = r.id;
+  document.getElementById('f-user-name').value     = r.name;
+  document.getElementById('f-user-username').value = r.username;
+  document.getElementById('f-user-role').value     = r.role;
+  document.getElementById('f-user-phone').value    = r.phone||'';
+  document.getElementById('f-user-biz').value      = r.businessId||'';
+  document.getElementById('f-user-status').value   = r.status;
+  document.getElementById('pw-hint').style.display = 'block';
+  document.getElementById('user-form-panel').style.display = 'block';
+  document.getElementById('user-form-panel').scrollIntoView({ behavior:'smooth' });
+  onRoleChange();
+}
+
+function onRoleChange() {
+  const role = document.getElementById('f-user-role').value;
+  const bizField = document.getElementById('f-user-biz-field');
+  bizField.style.opacity = (role === 'admin' || role === 'officer') ? '0.4' : '1';
+}
+
+function saveUser() {
+  const name     = document.getElementById('f-user-name').value.trim();
+  const username = document.getElementById('f-user-username').value.trim();
+  const password = document.getElementById('f-user-password').value;
+  const password2 = document.getElementById('f-user-password2').value;
+  const isNew    = !document.getElementById('f-user-id').value;
+
+  if (!name || !username) {
+    showUserAlert('danger', 'Full Name and Username are required.'); return;
+  }
+  if (isNew && !password) {
+    showUserAlert('danger', 'Password is required for new users.'); return;
+  }
+  if (password && password !== password2) {
+    showUserAlert('danger', 'Passwords do not match.'); return;
+  }
+  if (password && password.length < 8) {
+    showUserAlert('danger', 'Password must be at least 8 characters.'); return;
+  }
+
+  const data = {
+    id:         document.getElementById('f-user-id').value || null,
+    name,
+    username,
+    password:   password || null,
+    role:       document.getElementById('f-user-role').value,
+    phone:      document.getElementById('f-user-phone').value.trim(),
+    businessId: document.getElementById('f-user-biz').value,
+    status:     document.getElementById('f-user-status').value,
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.ok) {
+        showUserAlert('success', 'User saved successfully.');
+        setTimeout(() => { closeUserForm(); loadUsers(); }, 1200);
+      } else {
+        showUserAlert('danger', res.message || 'Save failed.');
+      }
+    })
+    .withFailureHandler(err => showUserAlert('danger', err.message))
+    .saveUser(TOKEN, data);
+}
+
+function openResetModal(userId, name) {
+  document.getElementById('reset-user-id').value      = userId;
+  document.getElementById('reset-user-display').value = name;
+  document.getElementById('reset-new-pw').value       = '';
+  document.getElementById('reset-confirm-pw').value   = '';
+  document.getElementById('reset-pw-alert').style.display = 'none';
+  document.getElementById('reset-pw-modal').classList.add('open');
+}
+
+function closeResetModal() {
+  document.getElementById('reset-pw-modal').classList.remove('open');
+}
+
+function doResetPassword() {
+  const userId  = document.getElementById('reset-user-id').value;
+  const newPw   = document.getElementById('reset-new-pw').value;
+  const confirm = document.getElementById('reset-confirm-pw').value;
+  if (!newPw || newPw.length < 8) {
+    showResetAlert('danger', 'Password must be at least 8 characters.'); return;
+  }
+  if (newPw !== confirm) {
+    showResetAlert('danger', 'Passwords do not match.'); return;
+  }
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.ok) {
+        showResetAlert('success', 'Password reset successfully.');
+        setTimeout(closeResetModal, 1500);
+      } else {
+        showResetAlert('danger', res.message || 'Reset failed.');
+      }
+    })
+    .withFailureHandler(err => showResetAlert('danger', err.message))
+    .resetPassword(TOKEN, userId, newPw);
+}
+
+function showUserAlert(type, msg) {
+  const box = document.getElementById('user-form-alert');
+  box.style.display = 'block';
+  box.innerHTML = `<div class="alert ${type}"><i class="ti ti-${type==='success'?'circle-check':'alert-circle'}"></i>${msg}</div>`;
+}
+
+function showResetAlert(type, msg) {
+  const box = document.getElementById('reset-pw-alert');
+  box.style.display = 'block';
+  box.innerHTML = `<div class="alert ${type}"><i class="ti ti-${type==='success'?'circle-check':'alert-circle'}"></i>${msg}</div>`;
+}
+</script>

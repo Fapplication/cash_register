@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cash Registration Portal</title>
+  <?!= include('Stylesheet'); ?>
+</head>
+<body>
+
+<div class="portal-shell">
+  <!-- ── Sidebar ─────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-icon"><i class="ti ti-cash-register"></i></div>
+      <div>
+        <div class="sb-logo-text">CashReg Portal</div>
+        <div class="sb-logo-sub">Revenue System v1.0</div>
+      </div>
+    </div>
+
+    <div class="sb-role" id="sb-role">
+      <i class="ti ti-shield-check" id="sb-role-icon"></i>
+      <span id="sb-role-label">Administrator</span>
+    </div>
+
+    <nav>
+      <div class="nav-section">
+        <div class="nav-section-label">Overview</div>
+        <div class="nav-link active" data-page="dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+      </div>
+
+      <div class="nav-section" id="nav-ops">
+        <div class="nav-section-label">Operations</div>
+        <div class="nav-link" data-page="register"><i class="ti ti-receipt"></i>Cash Registration</div>
+        <div class="nav-link" data-page="receipts"><i class="ti ti-file-invoice"></i>Receipts</div>
+        <div class="nav-link" data-page="items"><i class="ti ti-package"></i>Item Management</div>
+      </div>
+
+      <div class="nav-section" id="nav-admin">
+        <div class="nav-section-label">Administration</div>
+        <div class="nav-link" data-page="businesses"><i class="ti ti-building"></i>Businesses</div>
+        <div class="nav-link" data-page="users"><i class="ti ti-users"></i>Users</div>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">Reports & Audit</div>
+        <div class="nav-link" data-page="reports"><i class="ti ti-chart-bar"></i>Reports</div>
+        <div class="nav-link" data-page="audit"><i class="ti ti-list-details"></i>Audit Trail</div>
+      </div>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-user" id="sb-user">Loading…</div>
+      <button class="btn sm w-full" style="justify-content:center" onclick="logout()">
+        <i class="ti ti-logout"></i> Sign out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main area ───────────────────────────────────── -->
+  <div class="main-area">
+    <div class="topbar">
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="clock-badge" id="clock"></div>
+        <button class="btn sm primary" onclick="navigate('register')">
+          <i class="ti ti-plus"></i> New Sale
+        </button>
+      </div>
+    </div>
+
+    <div class="page-content" id="page-content">
+      <div class="loading-overlay"><div class="spinner"></div> Loading dashboard…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Session bootstrap ─────────────────────────────────────
+const TOKEN  = sessionStorage.getItem('crp_token');
+const ROLE   = sessionStorage.getItem('crp_role')   || 'cashier';
+const NAME   = sessionStorage.getItem('crp_name')   || 'User';
+const USERID = sessionStorage.getItem('crp_userId') || '';
+
+const ROLE_LABELS = { admin:'Administrator', owner:'Business Owner', cashier:'Cashier', officer:'Revenue Officer' };
+const ROLE_ICONS  = { admin:'ti-shield-check', owner:'ti-building-store', cashier:'ti-device-desktop', officer:'ti-report-analytics' };
+
+if (!TOKEN) {
+  google.script.run.withSuccessHandler(u => window.location.href = u).getScriptUrl();
+}
+
+// Set sidebar identity
+document.getElementById('sb-role-label').textContent = ROLE_LABELS[ROLE] || ROLE;
+document.getElementById('sb-role-icon').className    = 'ti ' + (ROLE_ICONS[ROLE] || 'ti-user');
+document.getElementById('sb-user').textContent        = NAME;
+
+// Hide admin nav from cashier/officer
+if (ROLE === 'cashier' || ROLE === 'officer') {
+  document.getElementById('nav-admin').style.display = 'none';
+}
+// Officers can't register sales
+if (ROLE === 'officer') {
+  document.querySelector('[data-page="register"]').style.display = 'none';
+}
+
+// ── Clock ─────────────────────────────────────────────────
+function tickClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+tickClock(); setInterval(tickClock, 1000);
+
+// ── Navigation ────────────────────────────────────────────
+const PAGE_TITLES = {
+  dashboard:'Dashboard', register:'Cash Registration', receipts:'Receipt Management',
+  items:'Item Management', businesses:'Business Registration',
+  users:'User Management', reports:'Reports', audit:'Audit Trail',
+};
+const PAGE_INCLUDES = {
+  dashboard:'Dashboard', register:'Register', receipts:'Receipts',
+  items:'Items', businesses:'Businesses', users:'Users',
+  reports:'Reports', audit:'Audit',
+};
+
+let currentPage = '';
+
+function navigate(page) {
+  if (currentPage === page) return;
+  currentPage = page;
+
+  document.querySelectorAll('.nav-link').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  document.getElementById('page-title').textContent = PAGE_TITLES[page] || page;
+  const content = document.getElementById('page-content');
+  content.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Loading…</div>';
+
+  google.script.run
+    .withSuccessHandler(html => { content.innerHTML = html; initPage(page); })
+    .withFailureHandler(err  => { content.innerHTML = '<div class="alert danger"><i class="ti ti-alert-circle"></i>'+err.message+'</div>'; })
+    .include(PAGE_INCLUDES[page]);
+}
+
+function initPage(page) {
+  if (page === 'dashboard') loadDashboard();
+}
+
+// ── Nav link clicks ───────────────────────────────────────
+document.querySelectorAll('.nav-link').forEach(el => {
+  el.addEventListener('click', () => navigate(el.dataset.page));
+});
+
+// ── Logout ────────────────────────────────────────────────
+function logout() {
+  google.script.run
+    .withSuccessHandler(() => {
+      sessionStorage.clear();
+      google.script.run.withSuccessHandler(u => window.location.href = u).getScriptUrl();
+    })
+    .doLogout(TOKEN);
+}
+
+// ── Dashboard loader ──────────────────────────────────────
+function loadDashboard() {
+  google.script.run
+    .withSuccessHandler(renderDashboard)
+    .withFailureHandler(err => {
+      document.getElementById('dash-stats').innerHTML =
+        '<div class="alert danger"><i class="ti ti-alert-circle"></i>' + err.message + '</div>';
+    })
+    .getDashboardStats(TOKEN);
+}
+
+function renderDashboard(stats) {
+  if (!stats || !stats.ok) return;
+
+  const fmt = n => (n || 0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const fmtInt = n => Math.round(n || 0).toLocaleString();
+
+  // Metrics
+  document.getElementById('dash-revenue').textContent  = 'ETB ' + fmt(stats.todayRevenue);
+  document.getElementById('dash-vat').textContent      = 'ETB ' + fmt(stats.todayTax);
+  document.getElementById('dash-count').textContent    = fmtInt(stats.txCount);
+  document.getElementById('dash-biz').textContent      = fmtInt(stats.bizCount);
+
+  // Bar chart
+  const maxVal = Math.max(...stats.trend.map(d => d.total), 1);
+  const bars   = document.getElementById('dash-bars');
+  bars.innerHTML = stats.trend.map(d => `
+    <div class="bar-col">
+      <div class="bar-val">${d.total > 0 ? (d.total/1000).toFixed(0)+'k' : ''}</div>
+      <div class="bar-fill" style="height:${Math.round(d.total/maxVal*100)}px;
+        background:${d.isToday ? '#185FA5' : '#BFDBFE'}"></div>
+      <div style="font-size:9.5px;color:#94A3B8;margin-top:5px">${d.day}</div>
+    </div>`).join('');
+
+  // Payment methods
+  const pmTotal = Object.values(stats.pmethods || {}).reduce((s, v) => s + v, 0) || 1;
+  const pmColors = { Cash:'#185FA5', 'Bank Transfer':'#15803D', 'Mobile Money':'#92400E' };
+  const pmDiv  = document.getElementById('dash-payments');
+  pmDiv.innerHTML = Object.entries(stats.pmethods || {}).map(([k, v]) => `
+    <div style="margin-bottom:10px">
+      <div class="flex justify-between text-xs text-muted mb-4">
+        <span>${k}</span><span>${Math.round(v/pmTotal*100)}%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${Math.round(v/pmTotal*100)}%;background:${pmColors[k]||'#64748B'}"></div>
+      </div>
+    </div>`).join('') || '<div class="text-xs text-muted">No transactions today yet.</div>';
+}
+
+// ── Boot ──────────────────────────────────────────────────
+navigate('dashboard');
+</script>
+
+</body>
+</html>

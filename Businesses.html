@@ -1,0 +1,274 @@
+<!-- Businesses.html — Business Registration page fragment -->
+<div id="businesses-page">
+
+  <!-- Add / Edit form panel -->
+  <div class="card" id="biz-form-panel" style="display:none">
+    <div class="card-head">
+      <div class="card-title" id="biz-form-title">Register New Business</div>
+      <button class="btn sm" onclick="closeBizForm()"><i class="ti ti-x"></i> Close</button>
+    </div>
+    <div id="biz-form-alert" style="display:none"></div>
+
+    <div class="form-grid cols-2">
+      <div class="field">
+        <label>Business Name <span style="color:#DC2626">*</span></label>
+        <input type="text" id="f-biz-name" placeholder="Trade or company name">
+      </div>
+      <div class="field">
+        <label>TIN Number <span style="color:#DC2626">*</span></label>
+        <input type="text" id="f-biz-tin" placeholder="TIN-YYYY-XXXXXX">
+      </div>
+    </div>
+    <div class="form-grid cols-2" style="margin-top:12px">
+      <div class="field">
+        <label>License Number <span style="color:#DC2626">*</span></label>
+        <input type="text" id="f-biz-license" placeholder="LIC-XXXXXX">
+      </div>
+      <div class="field">
+        <label>Phone</label>
+        <input type="text" id="f-biz-phone" placeholder="09XX-XXX-XXX">
+      </div>
+    </div>
+    <div class="form-grid cols-2" style="margin-top:12px">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="f-biz-email" placeholder="business@email.et">
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="f-biz-status">
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label>Address</label>
+      <input type="text" id="f-biz-address" placeholder="Full business address">
+    </div>
+
+    <input type="hidden" id="f-biz-id">
+    <input type="hidden" id="f-biz-created">
+
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn success" onclick="saveBusiness()">
+        <i class="ti ti-device-floppy"></i> Save Business
+      </button>
+      <button class="btn" onclick="closeBizForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Businesses table -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Registered Businesses</div>
+      <div class="card-actions">
+        <input type="text" id="biz-search" placeholder="Search businesses…"
+          style="width:200px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px"
+          oninput="filterBusinesses()">
+        <select id="biz-status-filter"
+          style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px"
+          onchange="filterBusinesses()">
+          <option value="">All Statuses</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+        <button class="btn primary" onclick="openBizForm()">
+          <i class="ti ti-plus"></i> Register Business
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary strip -->
+    <div style="display:flex;gap:16px;margin-bottom:14px">
+      <div style="font-size:12px;color:#64748B">
+        Total: <strong id="biz-count-total">—</strong>
+      </div>
+      <div style="font-size:12px;color:#166534">
+        Active: <strong id="biz-count-active">—</strong>
+      </div>
+      <div style="font-size:12px;color:#991B1B">
+        Inactive: <strong id="biz-count-inactive">—</strong>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Business Name</th>
+            <th>TIN Number</th>
+            <th>License No.</th>
+            <th>Address</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="biz-body">
+          <tr><td colspan="10" style="text-align:center;padding:32px">
+            <div class="spinner" style="margin:0 auto"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let _allBusinesses = [];
+
+(function init() { loadBusinesses(); })();
+
+function loadBusinesses() {
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      _allBusinesses = rows || [];
+      updateBizCounts(_allBusinesses);
+      renderBizTable(_allBusinesses);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('biz-body').innerHTML =
+        `<tr><td colspan="10"><div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div></td></tr>`;
+    })
+    .getBusiness(TOKEN);
+}
+
+function updateBizCounts(rows) {
+  document.getElementById('biz-count-total').textContent   = rows.length;
+  document.getElementById('biz-count-active').textContent  = rows.filter(r => r.status === 'Active').length;
+  document.getElementById('biz-count-inactive').textContent = rows.filter(r => r.status !== 'Active').length;
+}
+
+function renderBizTable(rows) {
+  const tbody = document.getElementById('biz-body');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10">
+      <div class="empty-state"><i class="ti ti-building-off"></i><p>No businesses registered yet.</p></div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((r, i) => `<tr>
+    <td class="text-muted text-xs">${i + 1}</td>
+    <td style="font-weight:600">${r.name}</td>
+    <td class="mono text-xs">${r.tin}</td>
+    <td class="mono text-xs">${r.licenseNo}</td>
+    <td class="text-muted text-xs" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.address}</td>
+    <td class="text-xs">${r.phone}</td>
+    <td class="text-xs text-muted">${r.email}</td>
+    <td><span class="badge ${r.status === 'Active' ? 'green' : 'red'} dot">${r.status}</span></td>
+    <td class="text-xs text-muted">${(r.createdAt||'').slice(0,10)}</td>
+    <td style="display:flex;gap:6px;flex-wrap:nowrap">
+      <button class="btn sm" onclick="editBiz(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <i class="ti ti-edit"></i>
+      </button>
+      <button class="btn sm ${r.status==='Active'?'danger':'success'}"
+        onclick="toggleBizStatus('${r.id}','${r.status==='Active'?'Inactive':'Active'}','${r.name}')">
+        <i class="ti ti-${r.status==='Active'?'ban':'check'}"></i>
+        ${r.status === 'Active' ? 'Deactivate' : 'Activate'}
+      </button>
+    </td>
+  </tr>`).join('');
+}
+
+function filterBusinesses() {
+  const q      = document.getElementById('biz-search').value.toLowerCase();
+  const status = document.getElementById('biz-status-filter').value;
+  renderBizTable(_allBusinesses.filter(r =>
+    (!q      || (r.name||'').toLowerCase().includes(q) ||
+                (r.tin||'').toLowerCase().includes(q) ||
+                (r.licenseNo||'').toLowerCase().includes(q)) &&
+    (!status || r.status === status)
+  ));
+}
+
+function openBizForm() {
+  clearBizForm();
+  document.getElementById('biz-form-title').textContent = 'Register New Business';
+  document.getElementById('biz-form-panel').style.display = 'block';
+  document.getElementById('biz-form-panel').scrollIntoView({ behavior:'smooth' });
+}
+
+function closeBizForm() {
+  document.getElementById('biz-form-panel').style.display = 'none';
+  clearBizForm();
+}
+
+function clearBizForm() {
+  ['f-biz-id','f-biz-name','f-biz-tin','f-biz-license',
+   'f-biz-phone','f-biz-email','f-biz-address','f-biz-created'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-biz-status').value = 'Active';
+  document.getElementById('biz-form-alert').style.display = 'none';
+}
+
+function editBiz(r) {
+  document.getElementById('biz-form-title').textContent  = 'Edit Business';
+  document.getElementById('f-biz-id').value      = r.id;
+  document.getElementById('f-biz-name').value    = r.name;
+  document.getElementById('f-biz-tin').value     = r.tin;
+  document.getElementById('f-biz-license').value = r.licenseNo;
+  document.getElementById('f-biz-phone').value   = r.phone;
+  document.getElementById('f-biz-email').value   = r.email;
+  document.getElementById('f-biz-address').value = r.address;
+  document.getElementById('f-biz-status').value  = r.status;
+  document.getElementById('f-biz-created').value = r.createdAt || '';
+  document.getElementById('biz-form-panel').style.display = 'block';
+  document.getElementById('biz-form-panel').scrollIntoView({ behavior:'smooth' });
+}
+
+function saveBusiness() {
+  const name    = document.getElementById('f-biz-name').value.trim();
+  const tin     = document.getElementById('f-biz-tin').value.trim();
+  const license = document.getElementById('f-biz-license').value.trim();
+  if (!name || !tin || !license) {
+    showBizAlert('danger', 'Business Name, TIN, and License Number are required.');
+    return;
+  }
+
+  const data = {
+    id:        document.getElementById('f-biz-id').value || null,
+    name,
+    tin,
+    licenseNo: license,
+    phone:     document.getElementById('f-biz-phone').value.trim(),
+    email:     document.getElementById('f-biz-email').value.trim(),
+    address:   document.getElementById('f-biz-address').value.trim(),
+    status:    document.getElementById('f-biz-status').value,
+    createdAt: document.getElementById('f-biz-created').value || new Date().toISOString(),
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.ok) {
+        showBizAlert('success', 'Business saved successfully.');
+        setTimeout(() => { closeBizForm(); loadBusinesses(); }, 1200);
+      } else {
+        showBizAlert('danger', res.message || 'Save failed.');
+      }
+    })
+    .withFailureHandler(err => showBizAlert('danger', err.message))
+    .saveBusiness(TOKEN, data);
+}
+
+function toggleBizStatus(id, newStatus, name) {
+  if (!confirm(`${newStatus === 'Inactive' ? 'Deactivate' : 'Activate'} "${name}"?`)) return;
+  google.script.run
+    .withSuccessHandler(function() { loadBusinesses(); })
+    .withFailureHandler(err => alert(err.message))
+    .toggleBusinessStatus(TOKEN, id, newStatus);
+}
+
+function showBizAlert(type, msg) {
+  const box = document.getElementById('biz-form-alert');
+  box.style.display = 'block';
+  box.innerHTML = `<div class="alert ${type}">
+    <i class="ti ti-${type==='success'?'circle-check':'alert-circle'}"></i>${msg}
+  </div>`;
+}
+</script>

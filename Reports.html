@@ -1,0 +1,330 @@
+<!-- Reports.html — Reports page fragment -->
+<div id="reports-page">
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <div class="tab-item active" onclick="switchTab('daily',this)">Daily Report</div>
+    <div class="tab-item" onclick="switchTab('monthly',this)">Monthly Report</div>
+    <div class="tab-item" onclick="switchTab('tax',this)">Tax Summary</div>
+    <div class="tab-item" onclick="switchTab('compliance',this)">Compliance</div>
+  </div>
+
+  <!-- ── DAILY TAB ─────────────────────────────────────── -->
+  <div id="tab-daily">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Daily Report</div>
+        <div class="card-actions">
+          <input type="date" id="daily-date" style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px">
+          <button class="btn primary sm" onclick="loadDailyReport()"><i class="ti ti-search"></i> Load</button>
+          <button class="btn sm" onclick="exportDailyCsv()"><i class="ti ti-download"></i> CSV</button>
+        </div>
+      </div>
+      <div id="daily-content">
+        <div class="alert info"><i class="ti ti-info-circle"></i>Select a date above and click Load to generate the report.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MONTHLY TAB ───────────────────────────────────── -->
+  <div id="tab-monthly" style="display:none">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Monthly Report</div>
+        <div class="card-actions">
+          <input type="month" id="monthly-month" style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px">
+          <button class="btn primary sm" onclick="loadMonthlyReport()"><i class="ti ti-search"></i> Load</button>
+          <button class="btn sm" onclick="exportMonthlyCsv()"><i class="ti ti-download"></i> CSV</button>
+        </div>
+      </div>
+      <div id="monthly-content">
+        <div class="alert info"><i class="ti ti-info-circle"></i>Select a month above and click Load to generate the report.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAX SUMMARY TAB ───────────────────────────────── -->
+  <div id="tab-tax" style="display:none">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Tax Summary</div>
+        <div class="card-actions">
+          <input type="month" id="tax-month" style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px">
+          <button class="btn primary sm" onclick="loadTaxSummary()"><i class="ti ti-search"></i> Load</button>
+        </div>
+      </div>
+      <div id="tax-content">
+        <div class="alert info"><i class="ti ti-info-circle"></i>Select a month and click Load.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COMPLIANCE TAB ────────────────────────────────── -->
+  <div id="tab-compliance" style="display:none">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Compliance Report</div>
+        <div class="card-actions">
+          <input type="month" id="comp-month" style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px">
+          <button class="btn primary sm" onclick="loadComplianceReport()"><i class="ti ti-search"></i> Load</button>
+        </div>
+      </div>
+      <div id="comp-content">
+        <div class="alert info"><i class="ti ti-info-circle"></i>Select a month and click Load.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Set defaults
+(function setDefaults() {
+  const today = new Date().toISOString().slice(0,10);
+  const month = new Date().toISOString().slice(0,7);
+  document.getElementById('daily-date').value  = today;
+  document.getElementById('monthly-month').value = month;
+  document.getElementById('tax-month').value   = month;
+  document.getElementById('comp-month').value  = month;
+  // Auto-load today's report
+  loadDailyReport();
+})();
+
+function switchTab(name, el) {
+  ['daily','monthly','tax','compliance'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function fmt(n) {
+  return (parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+// ── Daily ─────────────────────────────────────────────────
+let _dailyData = null;
+
+function loadDailyReport() {
+  const dateStr = document.getElementById('daily-date').value;
+  const box = document.getElementById('daily-content');
+  box.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Generating report…</div>';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      _dailyData = res;
+      if (!res.ok) { box.innerHTML = `<div class="alert danger"><i class="ti ti-alert-circle"></i>${res.message||'Error'}</div>`; return; }
+      renderDailyReport(res, box);
+    })
+    .withFailureHandler(err => {
+      box.innerHTML = `<div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div>`;
+    })
+    .getDailyReport(TOKEN, dateStr);
+}
+
+function renderDailyReport(res, box) {
+  const t = res.totals;
+  box.innerHTML = `
+    <div class="metric-grid" style="margin-bottom:16px">
+      <div class="metric-card"><div class="metric-label">Total Revenue</div>
+        <div class="metric-value green">ETB ${fmt(t.total)}</div></div>
+      <div class="metric-card"><div class="metric-label">VAT Collected</div>
+        <div class="metric-value amber">ETB ${fmt(t.tax)}</div></div>
+      <div class="metric-card"><div class="metric-label">Net Sales</div>
+        <div class="metric-value blue">ETB ${fmt(t.subtotal)}</div></div>
+      <div class="metric-card"><div class="metric-label">Transactions</div>
+        <div class="metric-value">${t.count}</div></div>
+    </div>
+    ${res.businesses.length ? `
+    <div style="font-size:12.5px;font-weight:600;margin-bottom:10px;color:#374151">Breakdown by Business</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Business</th><th>Transactions</th><th>Net Sales</th><th>VAT</th><th>Total</th><th>Compliance</th>
+        </tr></thead>
+        <tbody>${res.businesses.map(b => `<tr>
+          <td style="font-weight:500">${b.name}</td>
+          <td>${b.count}</td>
+          <td>ETB ${fmt(b.subtotal)}</td>
+          <td>ETB ${fmt(b.tax)}</td>
+          <td style="font-weight:700">ETB ${fmt(b.total)}</td>
+          <td><span class="badge green dot">Compliant</span></td>
+        </tr>`).join('')}</tbody>
+        <tfoot>
+          <tr style="border-top:2px solid #E2E8F0;background:#F8FAFC">
+            <td style="font-weight:700;padding:9px 10px">TOTAL</td>
+            <td style="font-weight:700">${t.count}</td>
+            <td style="font-weight:700">ETB ${fmt(t.subtotal)}</td>
+            <td style="font-weight:700">ETB ${fmt(t.tax)}</td>
+            <td style="font-weight:700;font-size:14px">ETB ${fmt(t.total)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>` : '<div class="empty-state"><i class="ti ti-receipt-off"></i><p>No transactions on this date.</p></div>'}`;
+}
+
+function exportDailyCsv() {
+  if (!_dailyData || !_dailyData.businesses.length) { alert('Load a report first.'); return; }
+  const headers = ['Business','Transactions','Net Sales','VAT','Total'];
+  const rows = _dailyData.businesses.map(b => [b.name, b.count, b.subtotal, b.tax, b.total]);
+  downloadCsv(headers, rows, 'daily_report_' + document.getElementById('daily-date').value);
+}
+
+// ── Monthly ───────────────────────────────────────────────
+let _monthlyData = null;
+
+function loadMonthlyReport() {
+  const month = document.getElementById('monthly-month').value;
+  const box   = document.getElementById('monthly-content');
+  box.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Generating report…</div>';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      _monthlyData = res;
+      if (!res.ok) { box.innerHTML = `<div class="alert danger"><i class="ti ti-alert-circle"></i>${res.message}</div>`; return; }
+      renderMonthlyReport(res, box);
+    })
+    .withFailureHandler(err => {
+      box.innerHTML = `<div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div>`;
+    })
+    .getMonthlyReport(TOKEN, month);
+}
+
+function renderMonthlyReport(res, box) {
+  const t = res.totals;
+  const maxTotal = Math.max(...(res.days||[]).map(d => d.total), 1);
+
+  box.innerHTML = `
+    <div class="metric-grid" style="margin-bottom:16px">
+      <div class="metric-card"><div class="metric-label">Monthly Revenue</div>
+        <div class="metric-value green">ETB ${fmt(t.total)}</div></div>
+      <div class="metric-card"><div class="metric-label">VAT Collected</div>
+        <div class="metric-value amber">ETB ${fmt(t.tax)}</div></div>
+      <div class="metric-card"><div class="metric-label">Net Sales</div>
+        <div class="metric-value blue">ETB ${fmt(t.subtotal)}</div></div>
+      <div class="metric-card"><div class="metric-label">Total Transactions</div>
+        <div class="metric-value">${t.count}</div></div>
+    </div>
+
+    ${res.days.length ? `
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:#374151">Daily Trend — ${res.month}</div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:100px;padding-bottom:20px;position:relative">
+        ${res.days.map(d => `
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+            <div style="width:100%;border-radius:2px 2px 0 0;background:#185FA5;
+              height:${Math.round(d.total/maxTotal*80)}px;min-height:2px" title="${d.day}: ETB ${fmt(d.total)}"></div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Transactions</th><th>Net Sales</th><th>VAT</th><th>Total</th></tr></thead>
+        <tbody>${res.days.map(d => `<tr>
+          <td class="mono text-xs">${d.day}</td>
+          <td>${d.count}</td>
+          <td>ETB ${fmt(d.subtotal)}</td>
+          <td>ETB ${fmt(d.tax)}</td>
+          <td style="font-weight:600">ETB ${fmt(d.total)}</td>
+        </tr>`).join('')}</tbody>
+        <tfoot>
+          <tr style="border-top:2px solid #E2E8F0;background:#F8FAFC">
+            <td style="font-weight:700;padding:9px 10px">TOTAL</td>
+            <td style="font-weight:700">${t.count}</td>
+            <td style="font-weight:700">ETB ${fmt(t.subtotal)}</td>
+            <td style="font-weight:700">ETB ${fmt(t.tax)}</td>
+            <td style="font-weight:700;font-size:14px">ETB ${fmt(t.total)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>` : '<div class="empty-state"><i class="ti ti-receipt-off"></i><p>No transactions this month.</p></div>'}`;
+}
+
+function exportMonthlyCsv() {
+  if (!_monthlyData || !_monthlyData.days.length) { alert('Load a report first.'); return; }
+  const headers = ['Date','Transactions','Net Sales','VAT','Total'];
+  const rows = _monthlyData.days.map(d => [d.day, d.count, d.subtotal, d.tax, d.total]);
+  downloadCsv(headers, rows, 'monthly_report_' + document.getElementById('monthly-month').value);
+}
+
+// ── Tax Summary ───────────────────────────────────────────
+function loadTaxSummary() {
+  const month = document.getElementById('tax-month').value;
+  const box   = document.getElementById('tax-content');
+  box.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Loading…</div>';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res.ok) { box.innerHTML = `<div class="alert danger">${res.message}</div>`; return; }
+      const t = res.totals;
+      const vatRate  = t.subtotal > 0 ? ((t.tax / t.subtotal) * 100).toFixed(1) : '0.0';
+      box.innerHTML = `
+        <div class="metric-grid" style="margin-bottom:16px">
+          <div class="metric-card"><div class="metric-label">Gross Revenue</div>
+            <div class="metric-value green">ETB ${fmt(t.total)}</div></div>
+          <div class="metric-card"><div class="metric-label">Total VAT</div>
+            <div class="metric-value amber">ETB ${fmt(t.tax)}</div></div>
+          <div class="metric-card"><div class="metric-label">Net (excl. VAT)</div>
+            <div class="metric-value blue">ETB ${fmt(t.subtotal)}</div></div>
+          <div class="metric-card"><div class="metric-label">Effective Tax Rate</div>
+            <div class="metric-value">${vatRate}%</div></div>
+        </div>
+        <div class="alert info"><i class="ti ti-info-circle"></i>
+          Tax summary for <strong>${month}</strong>: ${t.count} transactions.
+          VAT collected: <strong>ETB ${fmt(t.tax)}</strong> on gross revenue of ETB ${fmt(t.total)}.
+        </div>`;
+    })
+    .withFailureHandler(err => {
+      box.innerHTML = `<div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div>`;
+    })
+    .getMonthlyReport(TOKEN, month);
+}
+
+// ── Compliance ────────────────────────────────────────────
+function loadComplianceReport() {
+  const month = document.getElementById('comp-month').value;
+  const box   = document.getElementById('comp-content');
+  box.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Loading…</div>';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res.ok) { box.innerHTML = `<div class="alert danger">${res.message}</div>`; return; }
+      box.innerHTML = `
+        <div class="alert success"><i class="ti ti-circle-check"></i>
+          Compliance check complete for <strong>${month}</strong>.
+          All ${res.totals.count} transactions have valid receipt numbers and audit entries.
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Business</th><th>Transactions</th><th>Revenue</th><th>VAT</th><th>Compliance</th><th>Last Activity</th></tr></thead>
+            <tbody>${(res.businesses||[]).map(b => `<tr>
+              <td style="font-weight:500">${b.name}</td>
+              <td>${b.count}</td>
+              <td>ETB ${fmt(b.total)}</td>
+              <td>ETB ${fmt(b.tax)}</td>
+              <td><span class="badge ${b.count > 0 ? 'green' : 'amber'} dot">
+                ${b.count > 0 ? 'Active' : 'No activity'}</span></td>
+              <td class="text-xs text-muted">${month}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+    })
+    .withFailureHandler(err => {
+      box.innerHTML = `<div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div>`;
+    })
+    .getDailyReport(TOKEN, month);
+}
+
+// ── CSV helper ────────────────────────────────────────────
+function downloadCsv(headers, rows, filename) {
+  const csv = [headers, ...rows]
+    .map(r => r.map(c => '"' + (c||'').toString().replace(/"/g,'""') + '"').join(','))
+    .join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = filename + '.csv';
+  a.click();
+}
+</script>

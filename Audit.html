@@ -1,0 +1,222 @@
+<!-- Audit.html — Audit Trail page fragment -->
+<div id="audit-page">
+
+  <div class="alert info" style="margin-bottom:16px">
+    <i class="ti ti-lock"></i>
+    <div>Audit records are <strong>read-only</strong> and cannot be modified or deleted.
+    Every system action is timestamped and logged automatically.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">System Audit Log</div>
+      <div class="card-actions">
+        <input type="text" id="audit-search" placeholder="Search actions, users…"
+          style="width:200px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px"
+          oninput="filterAudit()">
+        <select id="audit-action-filter"
+          style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px"
+          onchange="filterAudit()">
+          <option value="">All Actions</option>
+          <option value="login">Login / Logout</option>
+          <option value="Transaction">Transactions</option>
+          <option value="Report">Reports</option>
+          <option value="Business">Business</option>
+          <option value="User">Users</option>
+          <option value="Item">Items</option>
+          <option value="Password">Password Resets</option>
+          <option value="Receipt">Receipts</option>
+        </select>
+        <button class="btn sm" onclick="exportAuditCsv()">
+          <i class="ti ti-download"></i> Export CSV
+        </button>
+        <button class="btn sm primary" onclick="loadAuditLogs()">
+          <i class="ti ti-refresh"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary strip -->
+    <div style="display:flex;gap:20px;margin-bottom:14px;padding:10px 14px;
+      background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0">
+      <div style="font-size:12px;color:#64748B">
+        Total entries: <strong id="audit-total">—</strong>
+      </div>
+      <div style="font-size:12px;color:#64748B">
+        Showing: <strong id="audit-showing">—</strong>
+      </div>
+      <div style="font-size:12px;color:#64748B">
+        Last action: <strong id="audit-last">—</strong>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="audit-table">
+        <thead>
+          <tr>
+            <th style="width:36px"></th>
+            <th>Action</th>
+            <th>User</th>
+            <th>Date & Time</th>
+            <th>IP Address</th>
+            <th>Log ID</th>
+          </tr>
+        </thead>
+        <tbody id="audit-body">
+          <tr><td colspan="6" style="text-align:center;padding:40px">
+            <div class="spinner" style="margin:0 auto"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination controls -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      margin-top:14px;padding-top:12px;border-top:1px solid #E2E8F0">
+      <div style="font-size:12px;color:#64748B" id="audit-page-info">Page 1</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn sm" id="audit-prev" onclick="auditPrev()" disabled>
+          <i class="ti ti-chevron-left"></i> Prev
+        </button>
+        <button class="btn sm" id="audit-next" onclick="auditNext()">
+          Next <i class="ti ti-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let _allAudit    = [];
+let _filteredAudit = [];
+let _auditPage   = 1;
+const AUDIT_PAGE_SIZE = 25;
+
+const ACTION_ICONS = {
+  login:       { icon:'ti-login',        color:'#185FA5', bg:'#DBEAFE' },
+  logout:      { icon:'ti-logout',       color:'#64748B', bg:'#F1F5F9' },
+  Transaction: { icon:'ti-receipt',      color:'#166534', bg:'#DCFCE7' },
+  Report:      { icon:'ti-chart-bar',    color:'#92400E', bg:'#FEF3C7' },
+  Business:    { icon:'ti-building',     color:'#5B21B6', bg:'#EDE9FE' },
+  User:        { icon:'ti-user',         color:'#0F766E', bg:'#CCFBF1' },
+  Item:        { icon:'ti-package',      color:'#1D4ED8', bg:'#DBEAFE' },
+  Password:    { icon:'ti-key',          color:'#B45309', bg:'#FEF3C7' },
+  Receipt:     { icon:'ti-file-invoice', color:'#166534', bg:'#DCFCE7' },
+  default:     { icon:'ti-list-details', color:'#475569', bg:'#F1F5F9' },
+};
+
+function getActionStyle(action) {
+  const key = Object.keys(ACTION_ICONS).find(k => k !== 'default' && (action||'').includes(k));
+  return ACTION_ICONS[key] || ACTION_ICONS.default;
+}
+
+(function init() { loadAuditLogs(); })();
+
+function loadAuditLogs() {
+  document.getElementById('audit-body').innerHTML =
+    '<tr><td colspan="6" style="text-align:center;padding:40px"><div class="spinner" style="margin:0 auto"></div></td></tr>';
+
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      _allAudit = rows || [];
+      _auditPage = 1;
+
+      document.getElementById('audit-total').textContent = _allAudit.length;
+      if (_allAudit.length > 0) {
+        document.getElementById('audit-last').textContent =
+          (_allAudit[0].date||'').replace('T',' ').slice(0,16);
+      }
+
+      applyAuditFilter();
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('audit-body').innerHTML =
+        `<tr><td colspan="6"><div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div></td></tr>`;
+    })
+    .getAuditLogs(TOKEN, 500);
+}
+
+function applyAuditFilter() {
+  const q      = document.getElementById('audit-search').value.toLowerCase();
+  const action = document.getElementById('audit-action-filter').value;
+
+  _filteredAudit = _allAudit.filter(r =>
+    (!q      || (r.action||'').toLowerCase().includes(q) ||
+                (r.username||'').toLowerCase().includes(q) ||
+                (r.id||'').toLowerCase().includes(q)) &&
+    (!action || (r.action||'').includes(action))
+  );
+
+  _auditPage = 1;
+  renderAuditPage();
+}
+
+function filterAudit() { applyAuditFilter(); }
+
+function renderAuditPage() {
+  const total  = _filteredAudit.length;
+  const start  = (_auditPage - 1) * AUDIT_PAGE_SIZE;
+  const end    = Math.min(start + AUDIT_PAGE_SIZE, total);
+  const page   = _filteredAudit.slice(start, end);
+  const maxPage = Math.ceil(total / AUDIT_PAGE_SIZE) || 1;
+
+  document.getElementById('audit-showing').textContent  = `${start+1}–${end} of ${total}`;
+  document.getElementById('audit-page-info').textContent = `Page ${_auditPage} of ${maxPage}`;
+  document.getElementById('audit-prev').disabled = _auditPage <= 1;
+  document.getElementById('audit-next').disabled = _auditPage >= maxPage;
+
+  const tbody = document.getElementById('audit-body');
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="6">
+      <div class="empty-state"><i class="ti ti-list-off"></i><p>No audit entries match the filter.</p></div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = page.map(r => {
+    const s = getActionStyle(r.action);
+    return `<tr>
+      <td>
+        <div style="width:28px;height:28px;border-radius:50%;
+          background:${s.bg};color:${s.color};
+          display:flex;align-items:center;justify-content:center;font-size:13px">
+          <i class="ti ${s.icon}"></i>
+        </div>
+      </td>
+      <td style="font-weight:500;font-size:12.5px">${r.action}</td>
+      <td>
+        <div style="font-size:12px">${r.username||'—'}</div>
+        <div class="mono text-xs text-muted">${r.userId||''}</div>
+      </td>
+      <td class="text-xs text-muted">${(r.date||'').replace('T',' ').slice(0,19)}</td>
+      <td class="mono text-xs text-muted">${r.ip||'—'}</td>
+      <td class="mono text-xs text-muted" style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.id||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function auditPrev() {
+  if (_auditPage > 1) { _auditPage--; renderAuditPage(); }
+}
+function auditNext() {
+  const maxPage = Math.ceil(_filteredAudit.length / AUDIT_PAGE_SIZE) || 1;
+  if (_auditPage < maxPage) { _auditPage++; renderAuditPage(); }
+}
+
+function exportAuditCsv() {
+  if (!_allAudit.length) { alert('No audit data to export.'); return; }
+  const headers = ['Log ID','Action','Username','User ID','Date & Time','IP Address'];
+  const rows = _filteredAudit.map(r => [
+    r.id, r.action, r.username, r.userId,
+    (r.date||'').replace('T',' ').slice(0,19), r.ip
+  ]);
+  const csv = [headers, ...rows]
+    .map(r => r.map(c => '"' + (c||'').toString().replace(/"/g,'""') + '"').join(','))
+    .join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'audit_log_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+</script>

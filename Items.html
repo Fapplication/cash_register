@@ -1,0 +1,259 @@
+<!-- Items.html — Item Management page fragment -->
+<div id="items-page">
+
+  <!-- Add / Edit form panel -->
+  <div class="card" id="item-form-panel" style="display:none">
+    <div class="card-head">
+      <div class="card-title" id="item-form-title">Add New Item</div>
+      <button class="btn sm" onclick="closeItemForm()"><i class="ti ti-x"></i> Close</button>
+    </div>
+    <div id="item-form-alert" style="display:none"></div>
+    <div class="form-grid cols-3">
+      <div class="field">
+        <label>Item Code</label>
+        <input type="text" id="f-item-code" placeholder="e.g. ITM-006">
+      </div>
+      <div class="field">
+        <label>Item Name</label>
+        <input type="text" id="f-item-name" placeholder="Product name">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="f-item-category">
+          <option>Electronics</option>
+          <option>Furniture</option>
+          <option>Groceries</option>
+          <option>Stationery</option>
+          <option>Clothing</option>
+          <option>Medicine</option>
+          <option>Construction</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid cols-3" style="margin-top:12px">
+      <div class="field">
+        <label>Unit Price (ETB)</label>
+        <input type="number" id="f-item-price" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>Tax Rate (%)</label>
+        <input type="number" id="f-item-tax" placeholder="15" min="0" max="100">
+        <span class="hint">Enter 0 for tax-exempt items</span>
+      </div>
+      <div class="field">
+        <label>Business</label>
+        <select id="f-item-biz">
+          <option value="">— All / General —</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="f-item-id">
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn success" onclick="saveItem()"><i class="ti ti-device-floppy"></i> Save Item</button>
+      <button class="btn" onclick="closeItemForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Items table -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Item Catalogue</div>
+      <div class="card-actions">
+        <input type="text" id="item-search" placeholder="Search items…"
+          style="width:180px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px"
+          oninput="filterItems()">
+        <select id="item-cat-filter" style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px" onchange="filterItems()">
+          <option value="">All Categories</option>
+          <option>Electronics</option><option>Furniture</option><option>Groceries</option>
+          <option>Stationery</option><option>Clothing</option><option>Medicine</option>
+          <option>Construction</option><option>Other</option>
+        </select>
+        <button class="btn primary" onclick="openItemForm()"><i class="ti ti-plus"></i> Add Item</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Item Name</th>
+            <th>Category</th>
+            <th>Unit Price</th>
+            <th>Tax Rate</th>
+            <th>Business</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="items-body">
+          <tr><td colspan="8" style="text-align:center;padding:32px">
+            <div class="spinner" style="margin:0 auto"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let _allItems = [];
+let _itemBizMap = {};
+
+(function init() {
+  // Load businesses for the form dropdown
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      const sel = document.getElementById('f-item-biz');
+      (rows||[]).forEach(b => {
+        _itemBizMap[b.id] = b.name;
+        sel.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+      });
+    })
+    .getBusiness(TOKEN);
+
+  loadItems();
+})();
+
+function loadItems() {
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      _allItems = rows || [];
+      renderItemsTable(_allItems);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('items-body').innerHTML =
+        `<tr><td colspan="8"><div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div></td></tr>`;
+    })
+    .getItems(TOKEN);
+}
+
+function fmt(n) {
+  return (parseFloat(n)||0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function renderItemsTable(rows) {
+  const tbody = document.getElementById('items-body');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8">
+      <div class="empty-state"><i class="ti ti-package-off"></i><p>No items found. Add your first item.</p></div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td class="mono text-xs">${r.code}</td>
+    <td style="font-weight:500">${r.name}</td>
+    <td><span class="badge gray">${r.category}</span></td>
+    <td>ETB ${fmt(r.price)}</td>
+    <td>${parseFloat(r.taxRate||0) > 0
+      ? `<span class="badge amber">${r.taxRate}%</span>`
+      : `<span class="badge green">Exempt</span>`}</td>
+    <td class="text-muted text-xs">${_itemBizMap[r.businessId] || (r.businessId ? r.businessId : 'General')}</td>
+    <td><span class="badge ${r.status === 'Active' ? 'green' : 'red'} dot">${r.status}</span></td>
+    <td style="display:flex;gap:6px">
+      <button class="btn sm" onclick="editItem(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <i class="ti ti-edit"></i> Edit
+      </button>
+      <button class="btn sm ${r.status==='Active'?'danger':'success'}"
+        onclick="toggleItemStatus('${r.id}','${r.status==='Active'?'Inactive':'Active'}')">
+        <i class="ti ti-${r.status==='Active'?'ban':'check'}"></i>
+        ${r.status === 'Active' ? 'Deactivate' : 'Activate'}
+      </button>
+    </td>
+  </tr>`).join('');
+}
+
+function filterItems() {
+  const q   = document.getElementById('item-search').value.toLowerCase();
+  const cat = document.getElementById('item-cat-filter').value;
+  renderItemsTable(_allItems.filter(r =>
+    (!q   || (r.name||'').toLowerCase().includes(q) || (r.code||'').toLowerCase().includes(q)) &&
+    (!cat || r.category === cat)
+  ));
+}
+
+function openItemForm() {
+  clearItemForm();
+  document.getElementById('item-form-title').textContent = 'Add New Item';
+  document.getElementById('item-form-panel').style.display = 'block';
+  document.getElementById('item-form-panel').scrollIntoView({ behavior:'smooth' });
+}
+
+function closeItemForm() {
+  document.getElementById('item-form-panel').style.display = 'none';
+  clearItemForm();
+}
+
+function clearItemForm() {
+  ['f-item-id','f-item-code','f-item-name','f-item-price','f-item-tax'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-item-category').value = 'Electronics';
+  document.getElementById('f-item-biz').value = '';
+  document.getElementById('item-form-alert').style.display = 'none';
+}
+
+function editItem(r) {
+  document.getElementById('item-form-title').textContent = 'Edit Item';
+  document.getElementById('f-item-id').value       = r.id;
+  document.getElementById('f-item-code').value     = r.code;
+  document.getElementById('f-item-name').value     = r.name;
+  document.getElementById('f-item-price').value    = r.price;
+  document.getElementById('f-item-tax').value      = r.taxRate;
+  document.getElementById('f-item-category').value = r.category;
+  document.getElementById('f-item-biz').value      = r.businessId || '';
+  document.getElementById('item-form-panel').style.display = 'block';
+  document.getElementById('item-form-panel').scrollIntoView({ behavior:'smooth' });
+}
+
+function saveItem() {
+  const name  = document.getElementById('f-item-name').value.trim();
+  const code  = document.getElementById('f-item-code').value.trim();
+  const price = document.getElementById('f-item-price').value;
+  if (!name || !code || !price) {
+    showItemAlert('danger', 'Item Code, Name, and Price are required.');
+    return;
+  }
+
+  const data = {
+    id:         document.getElementById('f-item-id').value || null,
+    code,
+    name,
+    category:   document.getElementById('f-item-category').value,
+    price:      parseFloat(price),
+    taxRate:    parseFloat(document.getElementById('f-item-tax').value) || 0,
+    businessId: document.getElementById('f-item-biz').value,
+    status:     'Active',
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.ok) {
+        showItemAlert('success', 'Item saved successfully.');
+        setTimeout(() => { closeItemForm(); loadItems(); }, 1200);
+      } else {
+        showItemAlert('danger', res.message || 'Save failed.');
+      }
+    })
+    .withFailureHandler(err => showItemAlert('danger', err.message))
+    .saveItem(TOKEN, data);
+}
+
+function toggleItemStatus(id, newStatus) {
+  const item = _allItems.find(i => i.id === id);
+  if (!item) return;
+  item.status = newStatus;
+  google.script.run
+    .withSuccessHandler(function() { loadItems(); })
+    .withFailureHandler(err => alert(err.message))
+    .saveItem(TOKEN, { ...item, status: newStatus });
+}
+
+function showItemAlert(type, msg) {
+  const box = document.getElementById('item-form-alert');
+  box.style.display = 'block';
+  box.innerHTML = `<div class="alert ${type}"><i class="ti ti-${type==='success'?'circle-check':'alert-circle'}"></i>${msg}</div>`;
+}
+</script>

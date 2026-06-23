@@ -1,0 +1,330 @@
+<!-- Register.html — Cash Registration page fragment -->
+<div id="register-page">
+
+  <div style="display:grid;grid-template-columns:1fr 370px;gap:16px;align-items:start">
+
+    <!-- Left: Transaction form -->
+    <div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">New Sale Transaction</div>
+          <span class="badge gray mono" id="tx-id-badge">Auto-generating…</span>
+        </div>
+
+        <div class="form-grid cols-2 mb-12">
+          <div class="field">
+            <label>Business</label>
+            <select id="reg-business" onchange="onBusinessChange()">
+              <option value="">— Select business —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Payment Method</label>
+            <select id="reg-payment" onchange="updateReceiptPreview()">
+              <option>Cash</option>
+              <option>Bank Transfer</option>
+              <option>Mobile Money</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div style="font-size:12.5px;font-weight:600;color:#374151;margin-bottom:12px">
+          <i class="ti ti-plus-circle" style="color:#185FA5"></i> Add Items
+        </div>
+
+        <div class="form-grid cols-3" style="align-items:end;margin-bottom:10px">
+          <div class="field">
+            <label>Item</label>
+            <select id="reg-item" onchange="onItemSelect()">
+              <option value="">— Select item —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Quantity</label>
+            <input type="number" id="reg-qty" min="1" value="1" oninput="calcLine()">
+          </div>
+          <div class="field">
+            <label>Unit Price (ETB)</label>
+            <input type="number" id="reg-price" placeholder="Auto-filled" oninput="calcLine()">
+          </div>
+        </div>
+        <div class="form-grid cols-3" style="align-items:end;margin-bottom:12px">
+          <div class="field">
+            <label>Tax Rate (%)</label>
+            <input type="number" id="reg-tax" value="15" oninput="calcLine()">
+          </div>
+          <div class="field">
+            <label>Line Total (ETB)</label>
+            <input type="text" id="reg-line-total" placeholder="Calculated" readonly>
+          </div>
+          <div>
+            <button class="btn success w-full" onclick="addCartLine()" style="justify-content:center">
+              <i class="ti ti-plus"></i> Add to Sale
+            </button>
+          </div>
+        </div>
+
+        <div id="cart-wrap">
+          <div class="empty-state" style="padding:28px 0">
+            <i class="ti ti-shopping-cart" style="font-size:32px"></i>
+            <p>No items added yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Receipt preview + confirm -->
+    <div>
+      <div class="card" style="position:sticky;top:16px">
+        <div class="card-head"><div class="card-title">Receipt Preview</div></div>
+
+        <div class="receipt-sheet" style="max-width:100%;padding:16px">
+          <div class="receipt-header">
+            <div class="receipt-biz" id="prev-biz-name">Select a Business</div>
+            <div class="receipt-meta" id="prev-biz-tin"></div>
+            <div class="receipt-meta" id="prev-biz-addr"></div>
+            <div style="margin-top:8px">
+              <span class="badge blue" style="font-size:10px">OFFICIAL RECEIPT</span>
+            </div>
+            <div class="mono" style="font-size:11px;margin-top:6px" id="prev-receipt-no">RCP-—</div>
+            <div class="text-xs text-muted" id="prev-date"></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <table style="width:100%;font-size:11.5px;border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid #E2E8F0">
+                <th style="padding:4px 0;font-size:10px;text-align:left;color:#64748B">Description</th>
+                <th style="padding:4px 0;font-size:10px;text-align:center;color:#64748B">Qty</th>
+                <th style="padding:4px 0;font-size:10px;text-align:right;color:#64748B">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="prev-items">
+              <tr><td colspan="3" style="text-align:center;color:#94A3B8;padding:10px 0;font-size:11px">Items appear here</td></tr>
+            </tbody>
+          </table>
+
+          <div class="divider"></div>
+          <div style="font-size:12px">
+            <div class="receipt-row"><span class="text-muted">Subtotal</span><span id="prev-subtotal">ETB 0.00</span></div>
+            <div class="receipt-row"><span class="text-muted">VAT</span><span id="prev-vat">ETB 0.00</span></div>
+          </div>
+          <div class="receipt-total-row"><span>TOTAL</span><span id="prev-total" style="font-size:15px">ETB 0.00</span></div>
+          <div style="text-align:center;font-size:11px;color:#64748B;margin-top:8px">
+            Payment: <span id="prev-payment">Cash</span>
+          </div>
+        </div>
+
+        <div id="sale-alert" style="display:none;margin-top:10px"></div>
+
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn primary" style="flex:1;justify-content:center" onclick="confirmSale()" id="confirm-btn">
+            <i class="ti ti-check"></i> Confirm Sale
+          </button>
+          <button class="btn danger" onclick="clearCart()" title="Clear cart">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+let _cart = [];
+let _businesses = [];
+let _items = [];
+let _bizMap = {};
+let _itemMap = {};
+
+// ── Boot: load businesses & items ─────────────────────────
+(function init() {
+  document.getElementById('prev-date').textContent = new Date().toLocaleString();
+  document.getElementById('prev-receipt-no').textContent = 'RCP-' + new Date().getFullYear() + '-XXXXX';
+  document.getElementById('tx-id-badge').textContent = 'TXN-' + Date.now();
+
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      _businesses = (rows||[]).filter(b => b.status === 'Active');
+      const sel = document.getElementById('reg-business');
+      _businesses.forEach(b => {
+        _bizMap[b.id] = b;
+        sel.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+      });
+    })
+    .withFailureHandler(showSaleError)
+    .getBusiness(TOKEN);
+
+  google.script.run
+    .withSuccessHandler(function(rows) {
+      _items = (rows||[]).filter(i => i.status === 'Active');
+      const sel = document.getElementById('reg-item');
+      _items.forEach(i => {
+        _itemMap[i.id] = i;
+        sel.innerHTML += `<option value="${i.id}">${i.name} — ETB ${parseFloat(i.price).toLocaleString()}</option>`;
+      });
+    })
+    .withFailureHandler(showSaleError)
+    .getItems(TOKEN);
+})();
+
+function onBusinessChange() {
+  const biz = _bizMap[document.getElementById('reg-business').value];
+  if (biz) {
+    document.getElementById('prev-biz-name').textContent = biz.name.toUpperCase();
+    document.getElementById('prev-biz-tin').textContent  = 'TIN: ' + biz.tin + ' | LIC: ' + biz.licenseNo;
+    document.getElementById('prev-biz-addr').textContent = biz.address;
+  }
+}
+
+function onItemSelect() {
+  const item = _itemMap[document.getElementById('reg-item').value];
+  if (item) {
+    document.getElementById('reg-price').value = item.price;
+    document.getElementById('reg-tax').value   = item.taxRate;
+    calcLine();
+  }
+}
+
+function calcLine() {
+  const qty   = parseFloat(document.getElementById('reg-qty').value)   || 0;
+  const price = parseFloat(document.getElementById('reg-price').value) || 0;
+  const tax   = parseFloat(document.getElementById('reg-tax').value)   || 0;
+  const total = qty * price * (1 + tax / 100);
+  document.getElementById('reg-line-total').value = total > 0 ? 'ETB ' + total.toFixed(2) : '';
+}
+
+function addCartLine() {
+  const itemId = document.getElementById('reg-item').value;
+  const item   = _itemMap[itemId];
+  if (!item) { showSaleError({ message: 'Please select an item.' }); return; }
+
+  const qty      = parseFloat(document.getElementById('reg-qty').value)   || 1;
+  const price    = parseFloat(document.getElementById('reg-price').value) || parseFloat(item.price);
+  const taxRate  = parseFloat(document.getElementById('reg-tax').value)   || 0;
+  const subline  = qty * price;
+  const vatLine  = subline * (taxRate / 100);
+
+  _cart.push({ itemId, name: item.name, qty, unitPrice: price, taxRate, lineSubtotal: subline, lineVat: vatLine, lineTotal: subline + vatLine });
+  updateCartDisplay();
+  // Reset item fields
+  document.getElementById('reg-item').value      = '';
+  document.getElementById('reg-price').value     = '';
+  document.getElementById('reg-line-total').value = '';
+  document.getElementById('reg-qty').value       = '1';
+  document.getElementById('reg-tax').value       = '15';
+}
+
+function removeCartLine(idx) {
+  _cart.splice(idx, 1);
+  updateCartDisplay();
+}
+
+function clearCart() {
+  _cart = [];
+  updateCartDisplay();
+}
+
+function fmt(n) { return (n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function updateCartDisplay() {
+  const wrap = document.getElementById('cart-wrap');
+  const prevItems = document.getElementById('prev-items');
+  const totSub  = _cart.reduce((s,r) => s + r.lineSubtotal, 0);
+  const totVat  = _cart.reduce((s,r) => s + r.lineVat, 0);
+  const totGrand = totSub + totVat;
+
+  // Update receipt preview totals
+  document.getElementById('prev-subtotal').textContent = 'ETB ' + fmt(totSub);
+  document.getElementById('prev-vat').textContent      = 'ETB ' + fmt(totVat);
+  document.getElementById('prev-total').textContent    = 'ETB ' + fmt(totGrand);
+  document.getElementById('prev-payment').textContent  = document.getElementById('reg-payment').value;
+
+  if (!_cart.length) {
+    wrap.innerHTML = '<div class="empty-state" style="padding:28px 0"><i class="ti ti-shopping-cart" style="font-size:32px"></i><p>No items added yet</p></div>';
+    prevItems.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#94A3B8;padding:10px 0;font-size:11px">Items appear here</td></tr>';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Tax</th><th>Total</th><th></th></tr></thead>
+      <tbody>${_cart.map((r,i) => `<tr>
+        <td style="font-weight:500">${r.name}</td>
+        <td>${r.qty}</td>
+        <td>ETB ${fmt(r.unitPrice)}</td>
+        <td>${r.taxRate}%</td>
+        <td style="font-weight:600">ETB ${fmt(r.lineTotal)}</td>
+        <td><button class="btn sm danger" onclick="removeCartLine(${i})"><i class="ti ti-trash"></i></button></td>
+      </tr>`).join('')}</tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #E2E8F0">
+          <td colspan="4" style="text-align:right;font-weight:600;padding:8px 10px">Total</td>
+          <td style="font-weight:700;font-size:13.5px;padding:8px 10px">ETB ${fmt(totGrand)}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>`;
+
+  prevItems.innerHTML = _cart.map(r => `
+    <tr>
+      <td style="padding:4px 0;font-size:11px">${r.name} ×${r.qty}</td>
+      <td style="text-align:center;font-size:11px">${r.qty}</td>
+      <td style="text-align:right;font-size:11px">ETB ${fmt(r.lineTotal)}</td>
+    </tr>`).join('');
+}
+
+function updateReceiptPreview() {
+  updateCartDisplay();
+}
+
+function confirmSale() {
+  const bizId = document.getElementById('reg-business').value;
+  if (!bizId)        { showSaleError({ message: 'Please select a business.' }); return; }
+  if (!_cart.length) { showSaleError({ message: 'Add at least one item before confirming.' }); return; }
+
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Processing…';
+
+  const saleData = {
+    businessId: bizId,
+    paymentType: document.getElementById('reg-payment').value,
+    items: _cart,
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-check"></i> Confirm Sale';
+      if (res.ok) {
+        clearCart();
+        document.getElementById('sale-alert').style.display = 'block';
+        document.getElementById('sale-alert').innerHTML =
+          `<div class="alert success"><i class="ti ti-circle-check"></i>
+            <div><strong>Sale registered!</strong><div class="text-xs mt-4">
+              Receipt <strong>${res.receiptNo}</strong> — Total: ETB ${(res.total||0).toLocaleString('en-US',{minimumFractionDigits:2})}
+            </div></div></div>`;
+        setTimeout(() => { document.getElementById('sale-alert').style.display = 'none'; }, 5000);
+      } else {
+        showSaleError({ message: res.message || 'Sale failed.' });
+      }
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-check"></i> Confirm Sale';
+      showSaleError(err);
+    })
+    .registerSale(TOKEN, saleData);
+}
+
+function showSaleError(err) {
+  const box = document.getElementById('sale-alert');
+  box.style.display = 'block';
+  box.innerHTML = `<div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message||'An error occurred.'}</div>`;
+}
+</script>
