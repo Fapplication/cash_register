@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cash Registration Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────────────────
+   CONFIGURATION — set your deployed GAS Web App URL here
+   ───────────────────────────────────────────────────────── */
+/* GAS_URL is set in the <script> block below */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;background:#F1F5F9;color:#1E293B}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.portal-shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;min-width:220px;background:#fff;border-right:1px solid #E2E8F0;display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:transform .2s}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:#fff;border-bottom:1px solid #E2E8F0;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:20}
+.page-content{flex:1;overflow-y:auto;padding:24px}
+
+/* ── Sidebar ────────────────────────────────────────────── */
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:10px}
+.sb-logo-icon{width:34px;height:34px;border-radius:8px;background:#185FA5;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0}
+.sb-logo-text{font-size:13px;font-weight:600;color:#1E293B;line-height:1.2}
+.sb-logo-sub{font-size:10px;color:#94A3B8}
+.sb-role{margin:10px 14px 4px;padding:5px 10px;border-radius:6px;background:#EFF6FF;color:#1D4ED8;font-size:11px;font-weight:500;display:flex;align-items:center;gap:6px}
+.nav-section{padding:6px 0}
+.nav-section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;padding:6px 16px 3px}
+.nav-link{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:12.5px;color:#475569;border-left:2px solid transparent;transition:background .12s,color .12s;user-select:none}
+.nav-link:hover{background:#F8FAFC;color:#1E293B}
+.nav-link.active{background:#EFF6FF;color:#185FA5;border-left-color:#185FA5;font-weight:500}
+.nav-link i{font-size:15px;width:16px;text-align:center;flex-shrink:0}
+.sb-footer{margin-top:auto;border-top:1px solid #E2E8F0;padding:14px 16px}
+.sb-user{font-size:11px;color:#64748B;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Login ──────────────────────────────────────────────── */
+.login-wrap{width:100%;max-width:420px;padding:24px}
+.login-card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:36px 32px}
+.login-icon{width:54px;height:54px;border-radius:14px;background:#185FA5;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;margin:0 auto 18px}
+.login-title{font-size:20px;font-weight:700;text-align:center;color:#1E293B;margin-bottom:4px}
+.login-subtitle{font-size:12.5px;color:#64748B;text-align:center;margin-bottom:20px}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.role-btn{padding:10px 8px;border:1px solid #E2E8F0;border-radius:8px;text-align:center;cursor:pointer;font-size:11.5px;color:#475569;transition:all .14s;user-select:none}
+.role-btn i{font-size:20px;display:block;margin-bottom:4px}
+.role-btn:hover,.role-btn.selected{border-color:#185FA5;background:#EFF6FF;color:#185FA5;font-weight:600}
+
+/* ── Shared components ──────────────────────────────────── */
+.card{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:18px 20px;margin-bottom:16px}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.card-title{font-size:13.5px;font-weight:600;color:#1E293B}
+.card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.metric-card{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:16px 18px}
+.metric-label{font-size:11px;font-weight:500;color:#64748B;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.metric-value{font-size:22px;font-weight:700;color:#1E293B;line-height:1}
+.metric-sub{font-size:11px;color:#94A3B8;margin-top:5px}
+.metric-value.blue{color:#185FA5}.metric-value.green{color:#166534}.metric-value.amber{color:#92400E}.metric-value.red{color:#991B1B}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border:1px solid #CBD5E1;border-radius:7px;background:#fff;cursor:pointer;font-size:12.5px;color:#374151;font-family:inherit;transition:background .12s;white-space:nowrap}
+.btn:hover{background:#F8FAFC}.btn:active{transform:scale(.98)}
+.btn.primary{background:#185FA5;color:#fff;border-color:#185FA5}.btn.primary:hover{background:#0C447C}
+.btn.success{background:#15803D;color:#fff;border-color:#15803D}.btn.success:hover{background:#166534}
+.btn.danger{background:#DC2626;color:#fff;border-color:#DC2626}.btn.danger:hover{background:#B91C1C}
+.btn.ghost{background:transparent;border-color:transparent;color:#185FA5}.btn.ghost:hover{background:#EFF6FF}
+.btn.sm{padding:4px 9px;font-size:11.5px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.form-grid{display:grid;gap:12px}.form-grid.cols-2{grid-template-columns:1fr 1fr}.form-grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11.5px;font-weight:500;color:#374151}
+.field input,.field select,.field textarea{font-family:inherit;font-size:12.5px;padding:7px 10px;border:1px solid #CBD5E1;border-radius:7px;background:#fff;color:#1E293B;width:100%;transition:border-color .12s}
+.field input:focus,.field select:focus{outline:none;border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+.field input[readonly]{background:#F8FAFC;color:#64748B}
+.field .hint{font-size:10.5px;color:#94A3B8}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead tr{border-bottom:1px solid #E2E8F0}
+th{text-align:left;padding:8px 10px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#64748B;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid #F1F5F9;color:#334155;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#F8FAFC}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:600}
+.badge.green{background:#DCFCE7;color:#166534}.badge.red{background:#FEE2E2;color:#991B1B}
+.badge.blue{background:#DBEAFE;color:#1E40AF}.badge.amber{background:#FEF3C7;color:#92400E}
+.badge.gray{background:#F1F5F9;color:#475569}.badge.purple{background:#EDE9FE;color:#5B21B6}
+.badge.dot::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block}
+.alert{padding:10px 14px;border-radius:8px;font-size:12.5px;display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+.alert i{font-size:15px;flex-shrink:0;margin-top:1px}
+.alert.info{background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE}
+.alert.success{background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0}
+.alert.warn{background:#FFFBEB;color:#92400E;border:1px solid #FDE68A}
+.alert.danger{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+.divider{height:1px;background:#E2E8F0;margin:14px 0}
+.mono{font-family:'Courier New',monospace;font-size:11.5px}
+.empty-state{text-align:center;padding:48px 24px;color:#94A3B8}
+.empty-state i{font-size:40px;display:block;margin-bottom:10px}
+.empty-state p{font-size:13px}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid #E2E8F0;border-top-color:#185FA5;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{display:flex;align-items:center;justify-content:center;padding:48px;color:#94A3B8;gap:10px;font-size:13px}
+.receipt-sheet{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:24px;font-size:12.5px}
+.receipt-header{text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px dashed #CBD5E1}
+.receipt-biz{font-size:15px;font-weight:700;color:#1E293B}
+.receipt-meta{font-size:11px;color:#64748B;margin-top:2px}
+.receipt-row{display:flex;justify-content:space-between;padding:3px 0}
+.receipt-total-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:700;border-top:1px solid #1E293B;margin-top:6px}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:130px;padding-bottom:4px}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0}
+.bar-fill{width:100%;border-radius:3px 3px 0 0;transition:height .4s ease;min-height:2px}
+.bar-val{font-size:9px;color:#64748B;margin-bottom:3px}
+.progress-track{height:6px;border-radius:3px;background:#F1F5F9;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .4s}
+.tab-bar{display:flex;border-bottom:1px solid #E2E8F0;margin-bottom:16px}
+.tab-item{padding:9px 16px;font-size:12.5px;cursor:pointer;color:#64748B;border-bottom:2px solid transparent;transition:all .15s;user-select:none}
+.tab-item:hover{color:#1E293B}.tab-item.active{color:#185FA5;border-bottom-color:#185FA5;font-weight:500}
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;align-items:center;justify-content:center;padding:24px}
+.modal-backdrop.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:500px;border:1px solid #E2E8F0;max-height:90vh;overflow-y:auto}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-title{font-size:14px;font-weight:600}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid #E2E8F0}
+.avatar{width:30px;height:30px;border-radius:50%;background:#DBEAFE;color:#1E40AF;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex-shrink:0}
+.clock-badge{font-size:11px;color:#94A3B8;font-variant-numeric:tabular-nums}
+.page-title{font-size:15px;font-weight:600;color:#1E293B}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.w-full{width:100%}.text-xs{font-size:11px}.text-sm{font-size:12px}.text-muted{color:#64748B}
+.font-bold{font-weight:700}.font-medium{font-weight:500}
+.mt-4{margin-top:4px}.mt-8{margin-top:8px}.mt-12{margin-top:12px}.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}
+.flex{display:flex}.items-center{align-items:center}.gap-8{gap:8px}.justify-between{justify-content:space-between}
+.text-right{text-align:right}.text-center{text-align:center}
+#gas-config-banner{background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:10px 16px;font-size:12.5px;color:#92400E;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+@media(max-width:768px){
+  .sidebar{position:fixed;left:-220px;top:0;bottom:0;z-index:50;box-shadow:4px 0 20px rgba(0,0,0,.1)}
+  .sidebar.open{left:0;transform:none}
+  .form-grid.cols-2,.form-grid.cols-3{grid-template-columns:1fr}
+  .metric-grid{grid-template-columns:1fr 1fr}
+}
+@media print{
+  .sidebar,.topbar,.btn,.tab-bar,.card-actions{display:none!important}
+  .page-content{padding:0}
+  .card{border:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════════════════════ -->
+<div id="login-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#F1F5F9">
+  <div class="login-wrap">
+    <!-- GAS URL setup notice -->
+    <div id="setup-notice" style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12.5px;color:#92400E;display:none">
+      <div style="font-weight:600;margin-bottom:6px"><i class="ti ti-settings"></i> Configure Backend URL</div>
+      <div style="margin-bottom:8px">Paste your Google Apps Script Web App URL below:</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec"
+          style="flex:1;font-size:12px;padding:6px 10px;border:1px solid #FDE68A;border-radius:6px;background:#fff">
+        <button class="btn sm" style="background:#92400E;color:#fff;border-color:#92400E" onclick="saveGasUrl()">Save</button>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:#B45309">
+        Deploy your Code.gs as a Web App (Execute as: Me, Who has access: Anyone) to get this URL.
+      </div>
+    </div>
+
+    <div class="login-card">
+      <div class="login-icon"><i class="ti ti-cash-register"></i></div>
+      <div class="login-title">Cash Registration Portal</div>
+      <div class="login-subtitle">Revenue Management System</div>
+
+      <div style="font-size:11.5px;font-weight:500;color:#374151;margin-bottom:8px">Sign in as</div>
+      <div class="role-grid">
+        <div class="role-btn selected" data-role="admin" onclick="selectRole(this)"><i class="ti ti-shield-check"></i>Administrator</div>
+        <div class="role-btn" data-role="owner" onclick="selectRole(this)"><i class="ti ti-building-store"></i>Business Owner</div>
+        <div class="role-btn" data-role="cashier" onclick="selectRole(this)"><i class="ti ti-device-desktop"></i>Cashier</div>
+        <div class="role-btn" data-role="officer" onclick="selectRole(this)"><i class="ti ti-report-analytics"></i>Revenue Officer</div>
+      </div>
+
+      <div class="field mb-12">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="Enter username" value="admin">
+      </div>
+      <div class="field mb-16">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Enter password">
+      </div>
+
+      <div id="login-alert" style="display:none"></div>
+
+      <button class="btn primary w-full" style="justify-content:center;padding:10px;font-size:13px" onclick="attemptLogin()" id="login-btn">
+        <i class="ti ti-login"></i> Sign in
+      </button>
+
+      <div style="text-align:center;margin-top:16px;font-size:11.5px;color:#94A3B8">
+        Default admin: <strong>admin / Admin@1234</strong> ·
+        <span style="color:#185FA5;cursor:pointer" onclick="toggleSetup()">Configure URL</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PORTAL SHELL (hidden until logged in)
+══════════════════════════════════════════════════════ -->
+<div id="portal-screen" style="display:none;height:100vh">
+  <div class="portal-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-logo">
+        <div class="sb-logo-icon"><i class="ti ti-cash-register"></i></div>
+        <div>
+          <div class="sb-logo-text">CashReg Portal</div>
+          <div class="sb-logo-sub">Revenue System v1.0</div>
+        </div>
+      </div>
+      <div class="sb-role"><i class="ti" id="sb-role-icon"></i><span id="sb-role-label"></span></div>
+      <nav>
+        <div class="nav-section">
+          <div class="nav-section-label">Overview</div>
+          <div class="nav-link active" onclick="navigate('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+        </div>
+        <div class="nav-section" id="nav-ops">
+          <div class="nav-section-label">Operations</div>
+          <div class="nav-link" onclick="navigate('register')"><i class="ti ti-receipt"></i>Cash Registration</div>
+          <div class="nav-link" onclick="navigate('receipts')"><i class="ti ti-file-invoice"></i>Receipts</div>
+          <div class="nav-link" onclick="navigate('items')"><i class="ti ti-package"></i>Item Management</div>
+        </div>
+        <div class="nav-section" id="nav-admin">
+          <div class="nav-section-label">Administration</div>
+          <div class="nav-link" onclick="navigate('businesses')"><i class="ti ti-building"></i>Businesses</div>
+          <div class="nav-link" onclick="navigate('users')"><i class="ti ti-users"></i>Users</div>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-label">Reports & Audit</div>
+          <div class="nav-link" onclick="navigate('reports')"><i class="ti ti-chart-bar"></i>Reports</div>
+          <div class="nav-link" onclick="navigate('audit')"><i class="ti ti-list-details"></i>Audit Trail</div>
+        </div>
+      </nav>
+      <div class="sb-footer">
+        <div class="sb-user" id="sb-user"></div>
+        <button class="btn sm w-full" style="justify-content:center" onclick="logout()"><i class="ti ti-logout"></i> Sign out</button>
+      </div>
+    </aside>
+
+    <div class="main-area">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn sm ghost" id="menu-btn" onclick="toggleSidebar()" style="display:none"><i class="ti ti-menu-2"></i></button>
+          <div class="page-title" id="page-title">Dashboard</div>
+        </div>
+        <div class="topbar-actions">
+          <div class="clock-badge" id="clock"></div>
+          <button class="btn sm primary" onclick="navigate('register')"><i class="ti ti-plus"></i> New Sale</button>
+        </div>
+      </div>
+      <div class="page-content" id="page-content">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reset PW Modal (shared) -->
+<div class="modal-backdrop" id="reset-pw-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-head"><div class="modal-title">Reset Password</div>
+      <button class="btn sm ghost" onclick="document.getElementById('reset-pw-modal').classList.remove('open')"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="reset-pw-alert" style="display:none"></div>
+    <div class="field mb-12"><label>User</label><input type="text" id="reset-user-display" readonly style="background:#F8FAFC"></div>
+    <div class="field mb-12"><label>New Password</label><input type="password" id="reset-new-pw" placeholder="Min 8 chars"></div>
+    <div class="field"><label>Confirm</label><input type="password" id="reset-confirm-pw"></div>
+    <input type="hidden" id="reset-user-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('reset-pw-modal').classList.remove('open')">Cancel</button>
+      <button class="btn primary" onclick="doResetPassword()"><i class="ti ti-key"></i> Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIGURATION
+// ══════════════════════════════════════════════════════════
+let GAS_URL = localStorage.getItem('crp_gas_url') || '';
+
+// ══════════════════════════════════════════════════════════
+//  SESSION
+// ══════════════════════════════════════════════════════════
+let SESSION = JSON.parse(sessionStorage.getItem('crp_session') || 'null');
+
+const ROLE_LABELS = {admin:'Administrator',owner:'Business Owner',cashier:'Cashier',officer:'Revenue Officer'};
+const ROLE_ICONS  = {admin:'ti-shield-check',owner:'ti-building-store',cashier:'ti-device-desktop',officer:'ti-report-analytics'};
+const ROLE_DEFAULTS = {admin:'admin',owner:'owner',cashier:'cashier',officer:'officer'};
+
+// ══════════════════════════════════════════════════════════
+//  API HELPER — all calls go through here
+// ══════════════════════════════════════════════════════════
+async function api(action, params = {}) {
+  if (!GAS_URL) throw new Error('Backend URL not configured. Click "Configure URL" below the login form.');
+  const body = { action, token: SESSION?.token || null, params };
+  const res  = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('Server error: ' + res.status);
+  return res.json();
+}
+
+// ══════════════════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════════════════
+function selectRole(el) {
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('login-username').value = ROLE_DEFAULTS[el.dataset.role] || '';
+  document.getElementById('login-password').value = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none')
+    attemptLogin();
+});
+
+async function attemptLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  if (!username || !password) { showLoginAlert('Please enter username and password.'); return; }
+  if (!GAS_URL) { toggleSetup(); showLoginAlert('Please configure the backend URL first.'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Signing in…';
+  document.getElementById('login-alert').style.display = 'none';
+
+  try {
+    const res = await api('login', { username, password });
+    if (res.ok) {
+      SESSION = { token: res.token, role: res.role, name: res.name, userId: res.userId };
+      sessionStorage.setItem('crp_session', JSON.stringify(SESSION));
+      bootPortal();
+    } else {
+      showLoginAlert(res.message || 'Invalid credentials.');
+    }
+  } catch(err) {
+    showLoginAlert(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-login"></i> Sign in';
+  }
+}
+
+function showLoginAlert(msg) {
+  const box = document.getElementById('login-alert');
+  box.style.display = 'block';
+  box.innerHTML = `<div class="alert danger"><i class="ti ti-alert-circle"></i>${msg}</div>`;
+}
+
+function toggleSetup() {
+  const n = document.getElementById('setup-notice');
+  n.style.display = n.style.display === 'none' ? 'block' : 'none';
+  if (GAS_URL) document.getElementById('gas-url-input').value = GAS_URL;
+}
+
+function saveGasUrl() {
+  const val = document.getElementById('gas-url-input').value.trim();
+  if (!val || !val.startsWith('https://')) { alert('Enter a valid https:// URL.'); return; }
+  GAS_URL = val;
+  localStorage.setItem('crp_gas_url', val);
+  document.getElementById('setup-notice').style.display = 'none';
+  showLoginAlert('✅ URL saved! You can now sign in.');
+  document.getElementById('login-alert').querySelector('.alert').className = 'alert success';
+}
+
+// ══════════════════════════════════════════════════════════
+//  PORTAL BOOT
+// ══════════════════════════════════════════════════════════
+function bootPortal() {
+  document.getElementById('login-screen').style.display  = 'none';
+  document.getElementById('portal-screen').style.display = 'block';
+
+  document.getElementById('sb-role-label').textContent = ROLE_LABELS[SESSION.role] || SESSION.role;
+  document.getElementById('sb-role-icon').className    = 'ti ' + (ROLE_ICONS[SESSION.role] || 'ti-user');
+  document.getElementById('sb-user').textContent        = SESSION.name;
+
+  if (SESSION.role === 'cashier' || SESSION.role === 'officer')
+    document.getElementById('nav-admin').style.display = 'none';
+  if (SESSION.role === 'officer')
+    document.querySelector('.nav-link[onclick*="register"]').style.display = 'none';
+
+  if (window.innerWidth < 768)
+    document.getElementById('menu-btn').style.display = 'flex';
+
+  tickClock(); setInterval(tickClock, 1000);
+  navigate('dashboard');
+}
+
+// Auto-login if session exists
+if (SESSION && GAS_URL) { bootPortal(); }
+
+// ══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════
+const PAGE_TITLES = {
+  dashboard:'Dashboard', register:'Cash Registration', receipts:'Receipt Management',
+  items:'Item Management', businesses:'Business Registration',
+  users:'User Management', reports:'Reports', audit:'Audit Trail',
+};
+let currentPage = '';
+
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-link').forEach(el =>
+    el.classList.toggle('active', el.getAttribute('onclick') && el.getAttribute('onclick').includes("'"+page+"'")));
+  document.getElementById('page-title').textContent = PAGE_TITLES[page] || page;
+  document.getElementById('page-content').innerHTML =
+    '<div class="loading-overlay"><div class="spinner"></div> Loading…</div>';
+  PAGES[page]();
+  if (window.innerWidth < 768) document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+async function logout() {
+  try { await api('logout'); } catch(e) {}
+  SESSION = null;
+  sessionStorage.removeItem('crp_session');
+  document.getElementById('portal-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display  = 'flex';
+}
+
+function tickClock() {
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// ══════════════════════════════════════════════════════════
+//  SHARED UTILS
+// ══════════════════════════════════════════════════════════
+function fmt(n) { return (parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtInt(n) { return Math.round(n||0).toLocaleString(); }
+function payBadge(p) { return p==='Cash'?'green':p==='Bank Transfer'?'blue':'amber'; }
+function initials(name) { return (name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function setContent(html) { document.getElementById('page-content').innerHTML = html; }
+function showErr(err) { setContent(`<div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message||err}</div>`); }
+
+function downloadCsv(headers, rows, filename) {
+  const csv = [headers,...rows].map(r=>r.map(c=>'"'+(c||'').toString().replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = filename+'.csv'; a.click();
+}
+
+// ══════════════════════════════════════════════════════════
+//  PAGE: DASHBOARD
+// ══════════════════════════════════════════════════════════
+const PAGES = {};
+
+PAGES.dashboard = async function() {
+  setContent(`
+    <div class="metric-grid">
+      <div class="metric-card"><div class="metric-label">Today's Revenue</div><div class="metric-value green" id="dash-revenue"><span class="spinner"></span></div><div class="metric-sub">All businesses</div></div>
+      <div class="metric-card"><div class="metric-label">VAT Collected</div><div class="metric-value amber" id="dash-vat">—</div><div class="metric-sub">Standard rate</div></div>
+      <div class="metric-card"><div class="metric-label">Transactions Today</div><div class="metric-value blue" id="dash-count">—</div><div class="metric-sub">All cashiers</div></div>
+      <div class="metric-card"><div class="metric-label">Active Businesses</div><div class="metric-value" id="dash-biz">—</div><div class="metric-sub">Registered</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-head"><div class="card-title">7-Day Sales Trend</div><span class="badge blue">This week</span></div>
+        <div class="bar-chart" id="dash-bars" style="height:130px;padding-bottom:4px"><div class="spinner"></div></div>
+      </div>
+      <div class="card"><div class="card-head"><div class="card-title">Payment Methods</div></div>
+        <div id="dash-payments"><div class="spinner"></div></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-head"><div class="card-title">Recent Transactions</div>
+      <button class="btn sm" onclick="navigate('receipts')">View all <i class="ti ti-arrow-right"></i></button></div>
+      <div id="dash-recent"><div class="loading-overlay"><div class="spinner"></div></div></div>
+    </div>`);
+
+  try {
+    const [stats, txs] = await Promise.all([
+      api('getDashboardStats'),
+      api('getTransactions', { filters: { dateFrom: new Date().toISOString().slice(0,10) } }),
+    ]);
+
+    if (stats.ok) {
+      document.getElementById('dash-revenue').textContent = 'ETB ' + fmt(stats.todayRevenue);
+      document.getElementById('dash-vat').textContent     = 'ETB ' + fmt(stats.todayTax);
+      document.getElementById('dash-count').textContent   = fmtInt(stats.txCount);
+      document.getElementById('dash-biz').textContent     = fmtInt(stats.bizCount);
+
+      const maxVal = Math.max(...(stats.trend||[]).map(d=>d.total), 1);
+      document.getElementById('dash-bars').innerHTML =
+        (stats.trend||[]).map(d=>`<div class="bar-col">
+          <div class="bar-val">${d.total>0?(d.total/1000).toFixed(0)+'k':''}</div>
+          <div class="bar-fill" style="height:${Math.round(d.total/maxVal*110)}px;background:${d.isToday?'#185FA5':'#BFDBFE'}"></div>
+          <div style="font-size:9.5px;color:#94A3B8;margin-top:5px">${d.day}</div>
+        </div>`).join('');
+
+      const pmTotal = Object.values(stats.pmethods||{}).reduce((s,v)=>s+v,0)||1;
+      const pmColors = {Cash:'#185FA5','Bank Transfer':'#15803D','Mobile Money':'#92400E'};
+      document.getElementById('dash-payments').innerHTML =
+        Object.entries(stats.pmethods||{}).map(([k,v])=>`
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:4px">
+              <span>${k}</span><span>${Math.round(v/pmTotal*100)}%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:${Math.round(v/pmTotal*100)}%;background:${pmColors[k]||'#64748B'}"></div></div>
+          </div>`).join('') || '<div class="text-xs text-muted">No transactions today.</div>';
+    }
+
+    const rows = Array.isArray(txs) ? txs : [];
+    document.getElementById('dash-recent').innerHTML = rows.length
+      ? `<div class="table-wrap"><table><thead><tr><th>Receipt</th><th>Business</th><th>Cashier</th><th>VAT</th><th>Total</th><th>Payment</th><th>Time</th></tr></thead>
+          <tbody>${rows.slice(0,8).map(r=>`<tr>
+            <td><span class="mono" style="color:#185FA5;cursor:pointer" onclick="openReceiptDirect('${r.receiptNo}')">${r.receiptNo}</span></td>
+            <td>${r.businessName||r.businessId}</td><td>${r.cashierName||r.cashierId}</td>
+            <td>ETB ${fmt(r.tax)}</td><td style="font-weight:600">ETB ${fmt(r.total)}</td>
+            <td><span class="badge ${payBadge(r.paymentType)}">${r.paymentType}</span></td>
+            <td class="text-muted text-xs">${(r.date||'').slice(11,16)}</td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<div class="empty-state"><i class="ti ti-receipt-off"></i><p>No transactions today yet.</p></div>';
+  } catch(err) { showErr(err); }
+};
+
+function openReceiptDirect(rno) { navigate('receipts'); setTimeout(()=>{ if(typeof _openReceipt==='function') _openReceipt(rno); }, 500); }
+
+// ══════════════════════════════════════════════════════════
+//  PAGE: CASH REGISTRATION
+// ══════════════════════════════════════════════════════════
+let _cart=[], _regBizMap={}, _regItemMap={};
+
+PAGES.register = async function() {
+  setContent(`
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start">
+      <div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">New Sale Transaction</div><span class="badge gray mono" id="tx-badge">TXN-${Date.now()}</span></div>
+          <div class="form-grid cols-2 mb-12">
+            <div class="field"><label>Business</label><select id="reg-biz" onchange="onRegBizChange()"><option value="">— Select —</option></select></div>
+            <div class="field"><label>Payment Method</label>
+              <select id="reg-pay"><option>Cash</option><option>Bank Transfer</option><option>Mobile Money</option></select>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div style="font-size:12.5px;font-weight:600;color:#374151;margin-bottom:12px"><i class="ti ti-plus-circle" style="color:#185FA5"></i> Add Items</div>
+          <div class="form-grid cols-3" style="margin-bottom:10px">
+            <div class="field"><label>Item</label><select id="reg-item" onchange="onRegItemSelect()"><option value="">— Select —</option></select></div>
+            <div class="field"><label>Quantity</label><input type="number" id="reg-qty" min="1" value="1" oninput="calcRegLine()"></div>
+            <div class="field"><label>Unit Price (ETB)</label><input type="number" id="reg-price" placeholder="Auto-filled" oninput="calcRegLine()"></div>
+          </div>
+          <div class="form-grid cols-3" style="margin-bottom:12px;align-items:end">
+            <div class="field"><label>Tax Rate (%)</label><input type="number" id="reg-tax" value="15" oninput="calcRegLine()"></div>
+            <div class="field"><label>Line Total (ETB)</label><input type="text" id="reg-line-total" readonly></div>
+            <button class="btn success" style="justify-content:center" onclick="addRegLine()"><i class="ti ti-plus"></i> Add</button>
+          </div>
+          <div id="reg-cart"><div class="empty-state" style="padding:24px 0"><i class="ti ti-shopping-cart"></i><p>No items yet</p></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="position:sticky;top:16px">
+          <div class="card-head"><div class="card-title">Receipt Preview</div></div>
+          <div class="receipt-sheet" style="padding:16px">
+            <div class="receipt-header">
+              <div class="receipt-biz" id="prev-biz">Select a Business</div>
+              <div class="receipt-meta" id="prev-tin"></div>
+              <div style="margin:8px 0"><span class="badge blue" style="font-size:10px">OFFICIAL RECEIPT</span></div>
+              <div class="mono" style="font-size:11px">RCP-${new Date().getFullYear()}-XXXXX</div>
+              <div class="text-xs text-muted">${new Date().toLocaleString()}</div>
+            </div>
+            <div class="divider"></div>
+            <table style="width:100%;font-size:11.5px;border-collapse:collapse">
+              <thead><tr style="border-bottom:1px solid #E2E8F0">
+                <th style="padding:4px 0;font-size:10px;text-align:left;color:#64748B">Item</th>
+                <th style="text-align:center;font-size:10px;color:#64748B">Qty</th>
+                <th style="text-align:right;font-size:10px;color:#64748B">Total</th>
+              </tr></thead>
+              <tbody id="prev-items"><tr><td colspan="3" style="text-align:center;color:#94A3B8;padding:10px;font-size:11px">Items appear here</td></tr></tbody>
+            </table>
+            <div class="divider"></div>
+            <div style="font-size:12px">
+              <div class="receipt-row"><span class="text-muted">Subtotal</span><span id="prev-sub">ETB 0.00</span></div>
+              <div class="receipt-row"><span class="text-muted">VAT</span><span id="prev-vat">ETB 0.00</span></div>
+            </div>
+            <div class="receipt-total-row"><span>TOTAL</span><span id="prev-total">ETB 0.00</span></div>
+            <div style="text-align:center;font-size:11px;color:#64748B;margin-top:8px">Payment: <span id="prev-pay">Cash</span></div>
+          </div>
+          <div id="reg-alert" style="display:none;margin-top:10px"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn primary" style="flex:1;justify-content:center" onclick="confirmRegSale()" id="reg-confirm-btn">
+              <i class="ti ti-check"></i> Confirm Sale
+            </button>
+            <button class="btn danger" onclick="_cart=[];updateRegCart()" title="Clear"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>`);
+
+  _cart = []; _regBizMap = {}; _regItemMap = {};
+  try {
+    const [bizRows, itemRows] = await Promise.all([api('getBusiness'), api('getItems')]);
+    const bizSel = document.getElementById('reg-biz');
+    (Array.isArray(bizRows)?bizRows:[]).filter(b=>b.status==='Active').forEach(b => {
+      _regBizMap[b.id]=b; bizSel.innerHTML+=`<option value="${b.id}">${b.name}</option>`;
+    });
+    const itemSel = document.getElementById('reg-item');
+    (Array.isArray(itemRows)?itemRows:[]).filter(i=>i.status==='Active').forEach(i => {
+      _regItemMap[i.id]=i; itemSel.innerHTML+=`<option value="${i.id}">${i.name} — ETB ${fmt(i.price)}</option>`;
+    });
+  } catch(err) { showRegAlert('danger', err.message); }
+};
+
+function onRegBizChange() {
+  const b = _regBizMap[document.getElementById('reg-biz').value];
+  if (b) { document.getElementById('prev-biz').textContent=b.name.toUpperCase(); document.getElementById('prev-tin').textContent='TIN: '+b.tin; }
+}
+function onRegItemSelect() {
+  const i = _regItemMap[document.getElementById('reg-item').value];
+  if (i) { document.getElementById('reg-price').value=i.price; document.getElementById('reg-tax').value=i.taxRate; calcRegLine(); }
+}
+function calcRegLine() {
+  const qty=parseFloat(document.getElementById('reg-qty')?.value)||0;
+  const price=parseFloat(document.getElementById('reg-price')?.value)||0;
+  const tax=parseFloat(document.getElementById('reg-tax')?.value)||0;
+  const t=qty*price*(1+tax/100);
+  const el=document.getElementById('reg-line-total'); if(el) el.value=t>0?'ETB '+t.toFixed(2):'';
+}
+function addRegLine() {
+  const id=document.getElementById('reg-item').value; const i=_regItemMap[id];
+  if(!i){showRegAlert('danger','Select an item.');return;}
+  const qty=parseFloat(document.getElementById('reg-qty').value)||1;
+  const price=parseFloat(document.getElementById('reg-price').value)||parseFloat(i.price);
+  const tax=parseFloat(document.getElementById('reg-tax').value)||0;
+  const sub=qty*price; const vat=sub*(tax/100);
+  _cart.push({itemId:id,name:i.name,qty,unitPrice:price,taxRate:tax,lineSubtotal:sub,lineVat:vat,lineTotal:sub+vat});
+  updateRegCart();
+  document.getElementById('reg-item').value=''; document.getElementById('reg-price').value='';
+  document.getElementById('reg-line-total').value=''; document.getElementById('reg-qty').value='1';
+}
+function updateRegCart() {
+  const sub=_cart.reduce((s,r)=>s+r.lineSubtotal,0);
+  const vat=_cart.reduce((s,r)=>s+r.lineVat,0);
+  const total=sub+vat;
+  const setV=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  setV('prev-sub','ETB '+fmt(sub)); setV('prev-vat','ETB '+fmt(vat)); setV('prev-total','ETB '+fmt(total));
+  const pp=document.getElementById('prev-pay'); if(pp){const ps=document.getElementById('reg-pay'); if(ps)pp.textContent=ps.value;}
+  const cart=document.getElementById('reg-cart');
+  const prevItems=document.getElementById('prev-items');
+  if(!_cart.length){
+    if(cart)cart.innerHTML='<div class="empty-state" style="padding:24px 0"><i class="ti ti-shopping-cart"></i><p>No items yet</p></div>';
+    if(prevItems)prevItems.innerHTML='<tr><td colspan="3" style="text-align:center;color:#94A3B8;padding:10px;font-size:11px">Items appear here</td></tr>';
+    return;
+  }
+  if(cart)cart.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Tax</th><th>Total</th><th></th></tr></thead>
+    <tbody>${_cart.map((r,i)=>`<tr><td style="font-weight:500">${r.name}</td><td>${r.qty}</td><td>ETB ${fmt(r.unitPrice)}</td>
+      <td>${r.taxRate}%</td><td style="font-weight:600">ETB ${fmt(r.lineTotal)}</td>
+      <td><button class="btn sm danger" onclick="_cart.splice(${i},1);updateRegCart()"><i class="ti ti-trash"></i></button></td></tr>`).join('')}</tbody>
+    <tfoot><tr style="border-top:2px solid #E2E8F0"><td colspan="4" style="text-align:right;font-weight:600;padding:8px 10px">Total</td>
+      <td style="font-weight:700;font-size:13.5px;padding:8px 10px">ETB ${fmt(total)}</td><td></td></tr></tfoot></table></div>`;
+  if(prevItems)prevItems.innerHTML=_cart.map(r=>`<tr><td style="font-size:11px;padding:4px 0">${r.name}×${r.qty}</td>
+    <td style="text-align:center;font-size:11px">${r.qty}</td><td style="text-align:right;font-size:11px">ETB ${fmt(r.lineTotal)}</td></tr>`).join('');
+}
+async function confirmRegSale() {
+  const bizId=document.getElementById('reg-biz')?.value;
+  if(!bizId){showRegAlert('danger','Select a business.');return;}
+  if(!_cart.length){showRegAlert('danger','Add at least one item.');return;}
+  const btn=document.getElementById('reg-confirm-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Processing…';
+  try {
+    const res=await api('registerSale',{saleData:{businessId:bizId,paymentType:document.getElementById('reg-pay').value,items:_cart}});
+    if(res.ok){
+      _cart=[]; updateRegCart();
+      showRegAlert('success',`Sale registered! Receipt <strong>${res.receiptNo}</strong> — Total: ETB ${fmt(res.total)}`);
+    } else { showRegAlert('danger',res.message||'Failed.'); }
+  } catch(err){ showRegAlert('danger',err.message); }
+  finally{ btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Confirm Sale'; }
+}
+function showRegAlert(type,msg){const b=document.getElementById('reg-alert');if(b){b.style.display='block';b.innerHTML=`<div class="alert ${type}"><i class="ti ti-${type==='success'?'circle-check':'alert-circle'}"></i>${msg}</div>`;}}
+
+// ══════════════════════════════════════════════════════════
+//  PAGE: RECEIPTS
+// ══════════════════════════════════════════════════════════
+let _allReceipts=[];
+PAGES.receipts = async function() {
+  setContent(`
+    <div id="receipt-list">
+      <div class="card"><div class="card-head"><div class="card-title">All Receipts</div>
+        <div class="card-actions">
+          <input id="receipt-search" placeholder="Search…" style="width:160px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px" oninput="filterReceipts()">
+          <button class="btn sm" onclick="exportReceiptsCsv()"><i class="ti ti-download"></i> CSV</button>
+        </div></div>
+        <div class="table-wrap"><table><thead><tr><th>Receipt</th><th>Business</th><th>Cashier</th><th>Date</th><th>Payment</th><th>VAT</th><th>Total</th><th></th></tr></thead>
+        <tbody id="receipts-tbody"><tr><td colspan="8" style="text-align:center;padding:32px"><div class="spinner" style="margin:0 auto"></div></td></tr></tbody></table></div>
+      </div>
+    </div>
+    <div id="receipt-detail" style="display:none"></div>`);
+  try {
+    _allReceipts = await api('getTransactions',{filters:{}});
+    if (!Array.isArray(_allReceipts)) _allReceipts=[];
+    renderReceiptsTable(_allReceipts);
+  } catch(err){ document.getElementById('receipts-tbody').innerHTML=`<tr><td colspan="8"><div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div></td></tr>`; }
+};
+function renderReceiptsTable(rows){
+  const tb=document.getElementById('receipts-tbody'); if(!tb)return;
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8"><div class="empty-state"><i class="ti ti-receipt-off"></i><p>No receipts found.</p></div></td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr>
+    <td><span class="mono" style="color:#185FA5;cursor:pointer;font-weight:600" onclick="_openReceipt('${r.receiptNo}')">${r.receiptNo}</span></td>
+    <td>${r.businessName||r.businessId}</td><td>${r.cashierName||r.cashierId}</td>
+    <td class="text-xs text-muted">${(r.date||'').replace('T',' ').slice(0,16)}</td>
+    <td><span class="badge ${payBadge(r.paymentType)}">${r.paymentType}</span></td>
+    <td>ETB ${fmt(r.tax)}</td><td style="font-weight:700">ETB ${fmt(r.total)}</td>
+    <td><button class="btn sm" onclick="_openReceipt('${r.receiptNo}')"><i class="ti ti-eye"></i></button></td>
+  </tr>`).join('');
+}
+function filterReceipts(){const q=document.getElementById('receipt-search').value.toLowerCase();renderReceiptsTable(_allReceipts.filter(r=>!q||(r.receiptNo||'').toLowerCase().includes(q)||(r.id||'').toLowerCase().includes(q)));}
+async function _openReceipt(rno){
+  const list=document.getElementById('receipt-list'); const det=document.getElementById('receipt-detail');
+  if(!list||!det)return;
+  list.style.display='none'; det.style.display='block';
+  det.innerHTML=`<button class="btn sm mb-12" onclick="document.getElementById('receipt-list').style.display='block';document.getElementById('receipt-detail').style.display='none'"><i class="ti ti-arrow-left"></i> Back</button><div class="loading-overlay"><div class="spinner"></div></div>`;
+  try{
+    const res=await api('getReceiptDetail',{receiptNo:rno});
+    if(!res.ok){det.innerHTML+='<div class="alert danger">'+res.message+'</div>';return;}
+    const tx=res.transaction; const items=res.items||[];
+    det.innerHTML=`<button class="btn sm mb-12" onclick="document.getElementById('receipt-list').style.display='block';document.getElementById('receipt-detail').style.display='none'"><i class="ti ti-arrow-left"></i> Back</button>
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Transaction Details</div><span class="badge green mono">${tx.receiptNo}</span></div>
+        <div class="form-grid cols-2" style="font-size:12.5px;gap:14px">
+          <div><div class="text-xs text-muted mb-4">Transaction ID</div><div class="mono">${tx.id}</div></div>
+          <div><div class="text-xs text-muted mb-4">Business</div><div>${tx.businessName}</div></div>
+          <div><div class="text-xs text-muted mb-4">TIN</div><div class="mono">${tx.businessTin}</div></div>
+          <div><div class="text-xs text-muted mb-4">Cashier</div><div>${tx.cashierName}</div></div>
+          <div><div class="text-xs text-muted mb-4">Payment</div><span class="badge ${payBadge(tx.paymentType)}">${tx.paymentType}</span></div>
+          <div><div class="text-xs text-muted mb-4">Date</div><div>${(tx.date||'').replace('T',' ').slice(0,19)}</div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>VAT</th><th>Total</th></tr></thead>
+        <tbody>${items.map(i=>`<tr><td>${i.itemName}</td><td>${i.qty}</td><td>ETB ${fmt(i.unitPrice)}</td><td>ETB ${fmt(i.lineVat)}</td><td style="font-weight:600">ETB ${fmt(i.lineTotal)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr style="border-top:2px solid #E2E8F0"><td colspan="4" style="text-align:right;font-weight:700;padding:9px 10px">Total</td>
+          <td style="font-weight:700;font-size:14px;padding:9px 10px">ETB ${fmt(tx.total)}</td></tr></tfoot></table></div>
+      </div>
+      <div>
+        <div class="receipt-sheet">
+          <div class="receipt-header">
+            <div class="receipt-biz">${(tx.businessName||'').toUpperCase()}</div>
+            <div class="receipt-meta">TIN: ${tx.businessTin}</div>
+            <div class="receipt-meta">${tx.businessAddr}</div>
+            <div style="margin:8px 0"><span class="badge blue" style="font-size:10px">OFFICIAL RECEIPT</span></div>
+            <div class="mono" style="font-size:11px">${tx.receiptNo}</div>
+            <div class="text-xs text-muted">${(tx.date||'').replace('T',' ').slice(0,19)}</div>
+          </div>
+          <div class="divider"></div>
+          <table style="width:100%;font-size:11.5px;border-collapse:collapse">
+            <thead><tr style="border-bottom:1px solid #E2E8F0"><th style="padding:4px 0;font-size:10px;color:#64748B">Description</th><th style="text-align:center;font-size:10px;color:#64748B">Qty</th><th style="text-align:right;font-size:10px;color:#64748B">Amount</th></tr></thead>
+            <tbody>${items.map(i=>`<tr><td style="padding:5px 0;font-size:11px">${i.itemName}</td><td style="text-align:center;font-size:11px">${i.qty}</td><td style="text-align:right;font-size:11px">ETB ${fmt(i.lineTotal)}</td></tr>`).join('')}</tbody>
+          </table>
+          <div class="divider"></div>
+          <div class="receipt-row text-sm"><span class="text-muted">Subtotal</span><span>ETB ${fmt(tx.subtotal)}</span></div>
+          <div class="receipt-row text-sm"><span class="text-muted">VAT</span><span>ETB ${fmt(tx.tax)}</span></div>
+          <div class="receipt-total-row"><span>TOTAL PAID</span><span>ETB ${fmt(tx.total)}</span></div>
+          <div style="text-align:center;font-size:11px;color:#64748B;margin-top:10px">Payment via ${tx.paymentType} · ${tx.cashierName}</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn primary" style="flex:1;justify-content:center" onclick="window.print()"><i class="ti ti-printer"></i> Print</button>
+        </div>
+      </div>
+    </div>`;
+  }catch(err){det.innerHTML+=`<div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div>`;}
+}
+function exportReceiptsCsv(){if(!_allReceipts.length){alert('No data.');return;}downloadCsv(['ReceiptNo','Business','Cashier','Date','Payment','VAT','Total'],_allReceipts.map(r=>[r.receiptNo,r.businessName,r.cashierName,(r.date||'').slice(0,19),r.paymentType,r.tax,r.total]),'receipts_'+new Date().toISOString().slice(0,10));}
+
+// ══════════════════════════════════════════════════════════
+//  PAGE: ITEMS
+// ══════════════════════════════════════════════════════════
+let _allItems=[],_itemBizMap={};
+PAGES.items = async function(){
+  setContent(`
+    <div class="card" id="item-form" style="display:none">
+      <div class="card-head"><div class="card-title" id="item-form-title">Add Item</div><button class="btn sm" onclick="document.getElementById('item-form').style.display='none'"><i class="ti ti-x"></i></button></div>
+      <div id="item-form-alert" style="display:none"></div>
+      <div class="form-grid cols-3">
+        <div class="field"><label>Code *</label><input id="fi-code" placeholder="ITM-XXX"></div>
+        <div class="field"><label>Name *</label><input id="fi-name" placeholder="Product name"></div>
+        <div class="field"><label>Category</label><select id="fi-cat"><option>Electronics</option><option>Furniture</option><option>Groceries</option><option>Stationery</option><option>Clothing</option><option>Medicine</option><option>Other</option></select></div>
+      </div>
+      <div class="form-grid cols-3" style="margin-top:12px">
+        <div class="field"><label>Price (ETB) *</label><input type="number" id="fi-price" min="0" step="0.01"></div>
+        <div class="field"><label>Tax Rate (%)</label><input type="number" id="fi-tax" value="15" min="0"></div>
+        <div class="field"><label>Business</label><select id="fi-biz"><option value="">General</option></select></div>
+      </div>
+      <input type="hidden" id="fi-id">
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn success" onclick="saveItemPage()"><i class="ti ti-device-floppy"></i> Save</button>
+        <button class="btn" onclick="document.getElementById('item-form').style.display='none'">Cancel</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-head"><div class="card-title">Item Catalogue</div>
+      <div class="card-actions">
+        <input id="item-search" placeholder="Search…" style="width:160px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px" oninput="filterItems()">
+        <button class="btn primary" onclick="openItemForm()"><i class="ti ti-plus"></i> Add Item</button>
+      </div></div>
+      <div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Price</th><th>Tax</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="items-tbody"><tr><td colspan="7" style="text-align:center;padding:32px"><div class="spinner" style="margin:0 auto"></div></td></tr></tbody></table></div>
+    </div>`);
+  _itemBizMap={};
+  try{
+    const [bizRows,itemRows]=await Promise.all([api('getBusiness'),api('getItems')]);
+    const sel=document.getElementById('fi-biz');
+    (Array.isArray(bizRows)?bizRows:[]).forEach(b=>{_itemBizMap[b.id]=b.name;sel.innerHTML+=`<option value="${b.id}">${b.name}</option>`;});
+    _allItems=Array.isArray(itemRows)?itemRows:[];
+    renderItemsTable(_allItems);
+  }catch(err){document.getElementById('items-tbody').innerHTML=`<tr><td colspan="7"><div class="alert danger"><i class="ti ti-alert-circle"></i>${err.message}</div></td></tr>`;}
+};
+function renderItemsTable(rows){
+  const tb=document.getElementById('items-tbody');if(!tb)return;
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><i class="ti ti-package-off"></i><p>No items yet.</p></div></td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr><td class="mono text-xs">${r.code}</td><td style="font-weight:500">${r.name}</td>
+    <td><span class="badge gray">${r.category}</span></td>
+    <td>ETB ${fmt(r.price)}</td>
+    <td>${parseFloat(r.taxRate||0)>0?`<span class="badge amber">${r.taxRate}%</span>`:'<span class="badge green">Exempt</span>'}</td>
+    <td><span class="badge ${r.status==='Active'?'green':'red'} dot">${r.status}</span></td>
+    <td style="display:flex;gap:4px">
+      <button class="btn sm" onclick="editItemPage(${JSON.stringify(r).replace(/"/g,'&quot;')})"><i class="ti ti-edit"></i></button>
+      <button class="btn sm ${r.status==='Active'?'danger':'success'}" onclick="toggleItemPage('${r.id}',${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <i class="ti ti-${r.status==='Active'?'ban':'check'}"></i></button>
+    </td></tr>`).join('');
+}
+function filterItems(){const q=document.getElementById('item-search').value.toLowerCase();renderItemsTable(_allItems.filter(r=>!q||(r.name||'').toLowerCase().includes(q)||(r.code||'').toLowerCase().includes(q)));}
+function openItemForm(){document.getElementById('fi-id').value='';document.getElementById('fi-code').value='';document.getElementById('fi-name').value='';document.getElementById('fi-price').value='';document.getElementById('fi-tax').value='15';document.getElementById('item-form-title').textContent='Add Item';document.getElementById('item-form').style.display='block';document.getElementById('item-form').scrollIntoView({behavior:'smooth'});}
+function editItemPage(r){document.getElementById('fi-id').value=r.id;document.getElementById('fi-code').value=r.code;document.getElementById('fi-name').value=r.name;document.getElementById('fi-price').value=r.price;document.getElementById('fi-tax').value=r.taxRate;document.getElementById('fi-cat').value=r.category;document.getElementById('fi-biz').value=r.businessId||'';document.getElementById('item-form-title').textContent='Edit Item';document.getElementById('item-form').style.display='block';document.getElementById('item-form').scrollIntoView({behavior:'smooth'});}
+async function saveItemPage(){
+  const name=document.getElementById('fi-name').value.trim(),code=document.getElementById('fi-code').value.trim(),price=document.getElementById('fi-price').value;
+  if(!name||!code||!price){showItemAlert('danger','Code, Name and Price required.');return;}
+  try{const res=await api('saveItem',{data:{id:document.getElementById('fi-id').value||null,code,name,category:document.getElementById('fi-cat').value,price:parseFloat(price),taxRate:parseFloat(document.getElementById('fi-tax').value)||0,businessId:document.getElementById('fi-biz').value,status:'Active'}});
+    if(res.ok){showItemAlert('success','Saved!');setTimeout(()=>{document.getElementById('item-form').style.display='none';PAGES.items();},1000);}else showItemAlert('danger',res.message);
+  }catch(err){showItemAlert('danger',err.message);}
+}
+async function toggleItemPage(id,r){
+  const ns=r.status==='Active'?'Inactive':'Active';
+  try{await api('saveItem',{data:{...r,status:ns}});PAGES.items();}catch(err){alert(err.message);}
+}
+function showItemAlert(t,m){const b=document.getElementById('item-form-alert');if(b){b.style.display='block';b.innerHTML=`<div class="alert ${t}"><i class="ti ti-${t==='success'?'circle-check':'alert-circle'}"></i>${m}</div>`;}}
+
+// ══════════════════════════════════════════════════════════
+//  PAGE: BUSINESSES
+// ══════════════════════════════════════════════════════════
+let _allBiz=[];
+PAGES.businesses = async function(){
+  setContent(`
+    <div class="card" id="biz-form" style="display:none">
+      <div class="card-head"><div class="card-title" id="biz-form-title">Register Business</div><button class="btn sm" onclick="document.getElementById('biz-form').style.display='none'"><i class="ti ti-x"></i></button></div>
+      <div id="biz-form-alert" style="display:none"></div>
+      <div class="form-grid cols-2"><div class="field"><label>Business Name *</label><input id="fb-name"></div><div class="field"><label>TIN Number *</label><input id="fb-tin" placeholder="TIN-YYYY-XXX"></div></div>
+      <div class="form-grid cols-2" style="margin-top:12px"><div class="field"><label>License No. *</label><input id="fb-lic" placeholder="LIC-XXX"></div><div class="field"><label>Phone</label><input id="fb-phone"></div></div>
+      <div class="form-grid cols-2" style="margin-top:12px"><div class="field"><label>Email</label><input type="email" id="fb-email"></div><div class="field"><label>Status</label><select id="fb-status"><option>Active</option><option>Inactive</option></select></div></div>
+      <div class="field" style="margin-top:12px"><label>Address</label><input id="fb-addr"></div>
+      <input type="hidden" id="fb-id"><input type="hidden" id="fb-created">
+      <div style="display:flex;gap:8px;margin-top:14px"><button class="btn success" onclick="saveBizPage()"><i class="ti ti-device-floppy"></i> Save</button><button class="btn" onclick="document.getElementById('biz-form').style.display='none'">Cancel</button></div>
+    </div>
+    <div class="card"><div class="card-head"><div class="card-title">Registered Businesses</div>
+      <div class="card-actions"><input id="biz-search" placeholder="Search…" style="width:160px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px" oninput="filterBiz()">
+        <button class="btn primary" onclick="openBizForm()"><i class="ti ti-plus"></i> Register</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Name</th><th>TIN</th><th>License</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="biz-tbody"><tr><td colspan="7" style="text-align:center;padding:32px"><div class="spinner" style="margin:0 auto"></div></td></tr></tbody></table></div>
+    </div>`);
+  try{_allBiz=await api('getBusiness');if(!Array.isArray(_allBiz))_allBiz=[];renderBizTable(_allBiz);}
+  catch(err){document.getElementById('biz-tbody').innerHTML=`<tr><td colspan="7"><div class="alert danger">${err.message}</div></td></tr>`;}
+};
+function renderBizTable(rows){
+  const tb=document.getElementById('biz-tbody');if(!tb)return;
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><i class="ti ti-building-off"></i><p>No businesses yet.</p></div></td></tr>';return;}
+  tb.innerHTML=rows.map((r,i)=>`<tr><td class="text-muted text-xs">${i+1}</td><td style="font-weight:600">${r.name}</td>
+    <td class="mono text-xs">${r.tin}</td><td class="mono text-xs">${r.licenseNo}</td><td class="text-xs">${r.phone}</td>
+    <td><span class="badge ${r.status==='Active'?'green':'red'} dot">${r.status}</span></td>
+    <td style="display:flex;gap:4px">
+      <button class="btn sm" onclick="editBizPage(${JSON.stringify(r).replace(/"/g,'&quot;')})"><i class="ti ti-edit"></i></button>
+      <button class="btn sm ${r.status==='Active'?'danger':'success'}" onclick="toggleBizPage('${r.id}','${r.status==='Active'?'Inactive':'Active'}','${r.name}')">
+        <i class="ti ti-${r.status==='Active'?'ban':'check'}"></i></button>
+    </td></tr>`).join('');
+}
+function filterBiz(){const q=document.getElementById('biz-search').value.toLowerCase();renderBizTable(_allBiz.filter(r=>!q||(r.name||'').toLowerCase().includes(q)||(r.tin||'').toLowerCase().includes(q)));}
+function openBizForm(){['fb-id','fb-name','fb-tin','fb-lic','fb-phone','fb-email','fb-addr','fb-created'].forEach(id=>document.getElementById(id).value='');document.getElementById('fb-status').value='Active';document.getElementById('biz-form-title').textContent='Register Business';document.getElementById('biz-form').style.display='block';document.getElementById('biz-form').scrollIntoView({behavior:'smooth'});}
+function editBizPage(r){document.getElementById('fb-id').value=r.id;document.getElementById('fb-name').value=r.name;document.getElementById('fb-tin').value=r.tin;document.getElementById('fb-lic').value=r.licenseNo;document.getElementById('fb-phone').value=r.phone;document.getElementById('fb-email').value=r.email;document.getElementById('fb-addr').value=r.address;document.getElementById('fb-status').value=r.status;document.getElementById('fb-created').value=r.createdAt||'';document.getElementById('biz-form-title').textContent='Edit Business';document.getElementById('biz-form').style.display='block';document.getElementById('biz-form').scrollIntoView({behavior:'smooth'});}
+async function saveBizPage(){
+  const name=document.getElementById('fb-name').value.trim(),tin=document.getElementById('fb-tin').value.trim(),lic=document.getElementById('fb-lic').value.trim();
+  if(!name||!tin||!lic){showBizAlert('danger','Name, TIN and License required.');return;}
+  try{const res=await api('saveBusiness',{data:{id:document.getElementById('fb-id').value||null,name,tin,licenseNo:lic,phone:document.getElementById('fb-phone').value.trim(),email:document.getElementById('fb-email').value.trim(),address:document.getElementById('fb-addr').value.trim(),status:document.getElementById('fb-status').value,createdAt:document.getElementById('fb-created').value||new Date().toISOString()}});
+    if(res.ok){showBizAlert('success','Saved!');setTimeout(()=>{document.getElementById('biz-form').style.display='none';PAGES.businesses();},1000);}else showBizAlert('danger',res.message);
+  }catch(err){showBizAlert('danger',err.message);}
+}
+async function toggleBizPage(id,ns,name){if(!confirm(`${ns==='Inactive'?'Deactivate':'Activate'} "${name}"?`))return;try{await api('toggleBusinessStatus',{id,status:ns});PAGES.businesses();}catch(err){alert(err.message);}}
+function showBizAlert(t,m){const b=document.getElementById('biz-form-alert');if(b){b.style.display='block';b.innerHTML=`<div class="alert ${t}"><i class="ti ti-${t==='success'?'circle-check':'alert-circle'}"></i>${m}</div>`;}}
+
+// ══════════════════════════════════════════════════════════
+//  PAGE: USERS
+// ══════════════════════════════════════════════════════════
+let _allUsers=[];
+PAGES.users = async function(){
+  setContent(`
+    <div class="modal-backdrop" id="user-form-modal">
+      <div class="modal"><div class="modal-head"><div class="modal-title" id="uf-title">Create User</div><button class="btn sm ghost" onclick="document.getElementById('user-form-modal').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+        <div id="uf-alert" style="display:none"></div>
+        <div class="form-grid cols-2"><div class="field"><label>Full Name *</label><input id="uf-name"></div><div class="field"><label>Username *</label><input id="uf-username" autocomplete="off"></div></div>
+        <div class="form-grid cols-2" style="margin-top:12px"><div class="field"><label>Role</label><select id="uf-role"><option value="cashier">Cashier</option><option value="owner">Business Owner</option><option value="officer">Revenue Officer</option><option value="admin">Administrator</option></select></div><div class="field"><label>Phone</label><input id="uf-phone"></div></div>
+        <div class="form-grid cols-2" style="margin-top:12px"><div class="field"><label>Business</label><select id="uf-biz"><option value="">— None —</option></select></div><div class="field"><label>Status</label><select id="uf-status"><option>Active</option><option>Inactive</option></select></div></div>
+        <div class="form-grid cols-2" style="margin-top:12px"><div class="field"><label>Password</label><input type="password" id="uf-pw" autocomplete="new-password"><span class="hint" id="uf-pw-hint">Leave blank to keep existing</span></div><div class="field"><label>Confirm</label><input type="password" id="uf-pw2"></div></div>
+        <input type="hidden" id="uf-id">
+        <div class="modal-footer"><button class="btn" onclick="document.getElementById('user-form-modal').classList.remove('open')">Cancel</button><button class="btn success" onclick="saveUserPage()"><i class="ti ti-device-floppy"></i> Save</button></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-head"><div class="card-title">System Users</div>
+      <div class="card-actions"><input id="user-search" placeholder="Search…" style="width:160px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px" oninput="filterUsers()">
+        <button class="btn primary" onclick="openUserModal()"><i class="ti ti-user-plus"></i> Create User</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Business</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="users-tbody"><tr><td colspan="7" style="text-align:center;padding:32px"><div class="spinner" style="margin:0 auto"></div></td></tr></tbody></table></div>
+    </div>`);
+  let bizRows=[];
+  try{
+    [bizRows,_allUsers]=await Promise.all([api('getBusiness'),api('getUsers')]);
+    if(!Array.isArray(bizRows))bizRows=[];
+    if(!Array.isArray(_allUsers))_allUsers=[];
+    const sel=document.getElementById('uf-biz');
+    bizRows.forEach(b=>sel.innerHTML+=`<option value="${b.id}">${b.name}</option>`);
+    window._bizRowsForUsers=bizRows;
+    renderUsersTable(_allUsers);
+  }catch(err){document.getElementById('users-tbody').innerHTML=`<tr><td colspan="7"><div class="alert danger">${err.message}</div></td></tr>`;}
+};
+function renderUsersTable(rows){
+  const tb=document.getElementById('users-tbody');if(!tb)return;
+  const bizMap={}; (window._bizRowsForUsers||[]).forEach(b=>bizMap[b.id]=b.name);
+  const rl={admin:'Administrator',owner:'Business Owner',cashier:'Cashier',officer:'Revenue Officer'};
+  const rb={admin:'red',owner:'amber',cashier:'green',officer:'blue'};
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><i class="ti ti-users-off"></i><p>No users.</p></div></td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${initials(r.name)}</div><span style="font-weight:500">${r.name}</span></div></td>
+    <td class="mono text-xs text-muted">${r.username}</td><td><span class="badge ${rb[r.role]||'gray'}">${rl[r.role]||r.role}</span></td>
+    <td class="text-xs text-muted">${bizMap[r.businessId]||'—'}</td><td class="text-xs">${r.phone||'—'}</td>
+    <td><span class="badge ${r.status==='Active'?'green':'red'} dot">${r.status}</span></td>
+    <td style="display:flex;gap:4px">
+      <button class="btn sm" onclick="editUserModal(${JSON.stringify(r).replace(/"/g,'&quot;')})"><i class="ti ti-edit"></i></button>
+      <button class="btn sm" onclick="openResetModal('${r.id}','${r.name}')"><i class="ti ti-key"></i></button>
+    </td></tr>`).join('');
+}
+function filterUsers(){const q=document.getElementById('user-search').value.toLowerCase();renderUsersTable(_allUsers.filter(r=>!q||(r.name||'').toLowerCase().includes(q)||(r.username||'').toLowerCase().includes(q)));}
+function openUserModal(){['uf-id','uf-name','uf-username','uf-phone','uf-pw','uf-pw2'].forEach(id=>document.getElementById(id).value='');document.getElementById('uf-role').value='cashier';document.getElementById('uf-status').value='Active';document.getElementById('uf-pw-hint').style.display='none';document.getElementById('uf-title').textContent='Create User';document.getElementById('user-form-modal').classList.add('open');}
+function editUserModal(r){document.getElementById('uf-id').value=r.id;document.getElementById('uf-name').value=r.name;document.getElementById('uf-username').value=r.username;document.getElementById('uf-role').value=r.role;document.getElementById('uf-phone').value=r.phone||'';document.getElementById('uf-biz').value=r.businessId||'';document.getElementById('uf-status').value=r.status;document.getElementById('uf-pw').value='';document.getElementById('uf-pw2').value='';document.getElementById('uf-pw-hint').style.display='block';document.getElementById('uf-title').textContent='Edit User';document.getElementById('user-form-modal').classList.add('open');}
+async function saveUserPage(){
+  const name=document.getElementById('uf-name').value.trim(),username=document.getElementById('uf-username').value.trim();
+  const pw=document.getElementById('uf-pw').value,pw2=document.getElementById('uf-pw2').value;
+  const isNew=!document.getElementById('uf-id').value;
+  if(!name||!username){showUfAlert('danger','Name and Username required.');return;}
+  if(isNew&&!pw){showUfAlert('danger','Password required for new users.');return;}
+  if(pw&&pw!==pw2){showUfAlert('danger','Passwords do not match.');return;}
+  if(pw&&pw.length<8){showUfAlert('danger','Min 8 characters.');return;}
+  try{const res=await api('saveUser',{data:{id:document.getElementById('uf-id').value||null,name,username,password:pw||null,role:document.getElementById('uf-role').value,phone:document.getElementById('uf-phone').value,businessId:document.getElementById('uf-biz').value,status:document.getElementById('uf-status').value}});
+    if(res.ok){showUfAlert('success','Saved!');setTimeout(()=>{document.getElementById('user-form-modal').classList.remove('open');PAGES.users();},1000);}else showUfAlert('danger',res.message);
+  }catch(err){showUfAlert('danger',err.message);}
+}
+function showUfAlert(t,m){const b=document.getElementById('uf-alert');if(b){b.style.display='block';b.innerHTML=`<div class="alert ${t}"><i class="ti ti-${t==='success'?'circle-check':'alert-circle'}"></i>${m}</div>`;}}
+function openResetModal(id,name){document.getElementById('reset-user-id').value=id;document.getElementById('reset-user-display').value=name;document.getElementById('reset-new-pw').value='';document.getElementById('reset-confirm-pw').value='';document.getElementById('reset-pw-alert').style.display='none';document.getElementById('reset-pw-modal').classList.add('open');}
+async function doResetPassword(){
+  const id=document.getElementById('reset-user-id').value,pw=document.getElementById('reset-new-pw').value,pw2=document.getElementById('reset-confirm-pw').value;
+  if(!pw||pw.length<8){showResetAlert('danger','Min 8 characters.');return;}
+  if(pw!==pw2){showResetAlert('danger','Passwords do not match.');return;}
+  try{const res=await api('resetPassword',{userId:id,newPassword:pw});
+    if(res.ok){showResetAlert('success','Password reset!');setTimeout(()=>document.getElementById('reset-pw-modal').classList.remove('open'),1500);}
+    else showResetAlert('danger',res.message);
+  }catch(err){showResetAlert('danger',err.message);}
+}
+function showResetAlert(t,m){const b=document.getElementById('reset-pw-alert');if(b){b.style.display='block';b.innerHTML=`<div class="alert ${t}"><i class="ti ti-${t==='success'?'circle-check':'alert-circle'}"></i>${m}</div>`;}}
+
+// ══════════════════════════════════════════════════════════
+//  PAGE: REPORTS
+// ══════════════════════════════════════════════════════════
+let _dailyData=null,_monthlyData=null;
+PAGES.reports = async function(){
+  const today=new Date().toISOString().slice(0,10);
+  const month=new Date().toISOString().slice(0,7);
+  setContent(`
+    <div class="tab-bar">
+      <div class="tab-item active" onclick="switchReportTab('daily',this)">Daily</div>
+      <div class="tab-item" onclick="switchReportTab('monthly',this)">Monthly</div>
+      <div class="tab-item" onclick="switchReportTab('tax',this)">Tax Summary</div>
+    </div>
+    <div id="rt-daily">
+      <div class="card"><div class="card-head"><div class="card-title">Daily Report</div>
+        <div class="card-actions"><input type="date" id="rpt-date" value="${today}" style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px">
+          <button class="btn primary sm" onclick="loadDailyRpt()"><i class="ti ti-search"></i> Load</button>
+          <button class="btn sm" onclick="exportDailyRpt()"><i class="ti ti-download"></i> CSV</button></div></div>
+        <div id="daily-rpt-content"><div class="alert info"><i class="ti ti-info-circle"></i>Select date and click Load.</div></div>
+      </div>
+    </div>
+    <div id="rt-monthly" style="display:none">
+      <div class="card"><div class="card-head"><div class="card-title">Monthly Report</div>
+        <div class="card-actions"><input type="month" id="rpt-month" value="${month}" style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px">
+          <button class="btn primary sm" onclick="loadMonthlyRpt()"><i class="ti ti-search"></i> Load</button>
+          <button class="btn sm" onclick="exportMonthlyRpt()"><i class="ti ti-download"></i> CSV</button></div></div>
+        <div id="monthly-rpt-content"><div class="alert info"><i class="ti ti-info-circle"></i>Select month and click Load.</div></div>
+      </div>
+    </div>
+    <div id="rt-tax" style="display:none">
+      <div class="card"><div class="card-head"><div class="card-title">Tax Summary</div>
+        <div class="card-actions"><input type="month" id="rpt-tax-month" value="${month}" style="font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px">
+          <button class="btn primary sm" onclick="loadTaxRpt()"><i class="ti ti-search"></i> Load</button></div></div>
+        <div id="tax-rpt-content"><div class="alert info"><i class="ti ti-info-circle"></i>Select month and click Load.</div></div>
+      </div>
+    </div>`);
+  loadDailyRpt();
+};
+function switchReportTab(t,el){['daily','monthly','tax'].forEach(n=>document.getElementById('rt-'+n).style.display=n===t?'block':'none');document.querySelectorAll('.tab-item').forEach(x=>x.classList.remove('active'));el.classList.add('active');}
+async function loadDailyRpt(){
+  const box=document.getElementById('daily-rpt-content');box.innerHTML='<div class="loading-overlay"><div class="spinner"></div></div>';
+  try{const res=await api('getDailyReport',{dateStr:document.getElementById('rpt-date').value});_dailyData=res;
+    if(!res.ok){box.innerHTML=`<div class="alert danger">${res.message}</div>`;return;}
+    const t=res.totals;
+    box.innerHTML=`<div class="metric-grid" style="margin-bottom:16px">
+      <div class="metric-card"><div class="metric-label">Revenue</div><div class="metric-value green">ETB ${fmt(t.total)}</div></div>
+      <div class="metric-card"><div class="metric-label">VAT</div><div class="metric-value amber">ETB ${fmt(t.tax)}</div></div>
+      <div class="metric-card"><div class="metric-label">Net Sales</div><div class="metric-value blue">ETB ${fmt(t.subtotal)}</div></div>
+      <div class="metric-card"><div class="metric-label">Transactions</div><div class="metric-value">${t.count}</div></div>
+    </div>
+    ${res.businesses.length?`<div class="table-wrap"><table><thead><tr><th>Business</th><th>Tx</th><th>Net</th><th>VAT</th><th>Total</th><th>Status</th></tr></thead>
+      <tbody>${res.businesses.map(b=>`<tr><td style="font-weight:500">${b.name}</td><td>${b.count}</td><td>ETB ${fmt(b.subtotal)}</td><td>ETB ${fmt(b.tax)}</td><td style="font-weight:700">ETB ${fmt(b.total)}</td><td><span class="badge green dot">Compliant</span></td></tr>`).join('')}</tbody></table></div>`
+    :'<div class="empty-state"><i class="ti ti-receipt-off"></i><p>No transactions on this date.</p></div>'}`;
+  }catch(err){box.innerHTML=`<div class="alert danger">${err.message}</div>`;}
+}
+function exportDailyRpt(){if(!_dailyData?.businesses?.length){alert('Load first.');return;}downloadCsv(['Business','Tx','Net','VAT','Total'],_dailyData.businesses.map(b=>[b.name,b.count,b.subtotal,b.tax,b.total]),'daily_'+document.getElementById('rpt-date').value);}
+async function loadMonthlyRpt(){
+  const box=document.getElementById('monthly-rpt-content');box.innerHTML='<div class="loading-overlay"><div class="spinner"></div></div>';
+  try{const res=await api('getMonthlyReport',{yearMonth:document.getElementById('rpt-month').value});_monthlyData=res;
+    if(!res.ok){box.innerHTML=`<div class="alert danger">${res.message}</div>`;return;}
+    const t=res.totals;const maxV=Math.max(...(res.days||[]).map(d=>d.total),1);
+    box.innerHTML=`<div class="metric-grid" style="margin-bottom:16px">
+      <div class="metric-card"><div class="metric-label">Revenue</div><div class="metric-value green">ETB ${fmt(t.total)}</div></div>
+      <div class="metric-card"><div class="metric-label">VAT</div><div class="metric-value amber">ETB ${fmt(t.tax)}</div></div>
+      <div class="metric-card"><div class="metric-label">Net</div><div class="metric-value blue">ETB ${fmt(t.subtotal)}</div></div>
+      <div class="metric-card"><div class="metric-label">Transactions</div><div class="metric-value">${t.count}</div></div>
+    </div>
+    ${res.days.length?`<div class="card" style="margin-bottom:0"><div class="bar-chart">
+      ${res.days.map(d=>`<div class="bar-col"><div class="bar-val">${d.total>0?(d.total/1000).toFixed(0)+'k':''}</div>
+        <div class="bar-fill" style="height:${Math.round(d.total/maxV*100)}px;background:#185FA5"></div>
+        <div style="font-size:9px;color:#94A3B8;margin-top:4px">${d.day.slice(8)}</div></div>`).join('')}
+    </div></div>
+    <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Date</th><th>Tx</th><th>Net</th><th>VAT</th><th>Total</th></tr></thead>
+      <tbody>${res.days.map(d=>`<tr><td class="mono text-xs">${d.day}</td><td>${d.count}</td><td>ETB ${fmt(d.subtotal)}</td><td>ETB ${fmt(d.tax)}</td><td style="font-weight:600">ETB ${fmt(d.total)}</td></tr>`).join('')}</tbody></table></div>`
+    :'<div class="empty-state"><i class="ti ti-receipt-off"></i><p>No transactions.</p></div>'}`;
+  }catch(err){box.innerHTML=`<div class="alert danger">${err.message}</div>`;}
+}
+function exportMonthlyRpt(){if(!_monthlyData?.days?.length){alert('Load first.');return;}downloadCsv(['Date','Tx','Net','VAT','Total'],_monthlyData.days.map(d=>[d.day,d.count,d.subtotal,d.tax,d.total]),'monthly_'+document.getElementById('rpt-month').value);}
+async function loadTaxRpt(){
+  const box=document.getElementById('tax-rpt-content');box.innerHTML='<div class="loading-overlay"><div class="spinner"></div></div>';
+  try{const res=await api('getMonthlyReport',{yearMonth:document.getElementById('rpt-tax-month').value});
+    if(!res.ok){box.innerHTML=`<div class="alert danger">${res.message}</div>`;return;}
+    const t=res.totals;const eff=t.subtotal>0?((t.tax/t.subtotal)*100).toFixed(1):'0.0';
+    box.innerHTML=`<div class="metric-grid">
+      <div class="metric-card"><div class="metric-label">Gross Revenue</div><div class="metric-value green">ETB ${fmt(t.total)}</div></div>
+      <div class="metric-card"><div class="metric-label">Total VAT</div><div class="metric-value amber">ETB ${fmt(t.tax)}</div></div>
+      <div class="metric-card"><div class="metric-label">Net (excl. VAT)</div><div class="metric-value blue">ETB ${fmt(t.subtotal)}</div></div>
+      <div class="metric-card"><div class="metric-label">Effective Rate</div><div class="metric-value">${eff}%</div></div>
+    </div>
+    <div class="alert info" style="margin-top:0"><i class="ti ti-info-circle"></i>
+      ${t.count} transactions · VAT collected: <strong>ETB ${fmt(t.tax)}</strong> on gross ETB ${fmt(t.total)}.</div>`;
+  }catch(err){box.innerHTML=`<div class="alert danger">${err.message}</div>`;}
+}
+
+// ══════════════════════════════════════════════════════════
+//  PAGE: AUDIT
+// ══════════════════════════════════════════════════════════
+let _allAudit=[],_filteredAudit=[],_auditPage=1;
+const AUDIT_PS=25;
+PAGES.audit = async function(){
+  setContent(`
+    <div class="alert info" style="margin-bottom:16px"><i class="ti ti-lock"></i>
+      <div>Audit records are <strong>read-only</strong>. Every action is timestamped and logged automatically.</div>
+    </div>
+    <div class="card"><div class="card-head"><div class="card-title">System Audit Log</div>
+      <div class="card-actions">
+        <input id="audit-search" placeholder="Search…" style="width:160px;font-size:12px;padding:6px 10px;border:1px solid #CBD5E1;border-radius:7px" oninput="filterAudit()">
+        <button class="btn sm" onclick="exportAuditCsv()"><i class="ti ti-download"></i> CSV</button>
+        <button class="btn sm primary" onclick="PAGES.audit()"><i class="ti ti-refresh"></i></button>
+      </div></div>
+      <div class="table-wrap"><table><thead><tr><th style="width:36px"></th><th>Action</th><th>User</th><th>Date & Time</th><th>IP</th></tr></thead>
+      <tbody id="audit-tbody"><tr><td colspan="5" style="text-align:center;padding:40px"><div class="spinner" style="margin:0 auto"></div></td></tr></tbody></table></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid #E2E8F0">
+        <div class="text-xs text-muted" id="audit-info">—</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm" id="audit-prev" onclick="auditPrev()" disabled><i class="ti ti-chevron-left"></i> Prev</button>
+          <button class="btn sm" id="audit-next" onclick="auditNext()">Next <i class="ti ti-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>`);
+  try{_allAudit=await api('getAuditLogs',{limit:500});if(!Array.isArray(_allAudit))_allAudit=[];_filteredAudit=_allAudit;_auditPage=1;renderAuditPage();}
+  catch(err){document.getElementById('audit-tbody').innerHTML=`<tr><td colspan="5"><div class="alert danger">${err.message}</div></td></tr>`;}
+};
+const AI={login:{i:'ti-login',c:'#185FA5',b:'#DBEAFE'},logout:{i:'ti-logout',c:'#64748B',b:'#F1F5F9'},Transaction:{i:'ti-receipt',c:'#166534',b:'#DCFCE7'},Report:{i:'ti-chart-bar',c:'#92400E',b:'#FEF3C7'},Business:{i:'ti-building',c:'#5B21B6',b:'#EDE9FE'},User:{i:'ti-user',c:'#0F766E',b:'#CCFBF1'},Item:{i:'ti-package',c:'#1D4ED8',b:'#DBEAFE'},Password:{i:'ti-key',c:'#B45309',b:'#FEF3C7'},Receipt:{i:'ti-file-invoice',c:'#166534',b:'#DCFCE7'}};
+function getAS(a){const k=Object.keys(AI).find(k=>k!=='default'&&(a||'').includes(k));return AI[k]||{i:'ti-list-details',c:'#475569',b:'#F1F5F9'};}
+function renderAuditPage(){
+  const total=_filteredAudit.length,start=(_auditPage-1)*AUDIT_PS,end=Math.min(start+AUDIT_PS,total),page=_filteredAudit.slice(start,end),maxPage=Math.ceil(total/AUDIT_PS)||1;
+  const info=document.getElementById('audit-info');if(info)info.textContent=`${start+1}–${end} of ${total} entries`;
+  const prev=document.getElementById('audit-prev');if(prev)prev.disabled=_auditPage<=1;
+  const next=document.getElementById('audit-next');if(next)next.disabled=_auditPage>=maxPage;
+  const tb=document.getElementById('audit-tbody');if(!tb)return;
+  if(!page.length){tb.innerHTML='<tr><td colspan="5"><div class="empty-state"><i class="ti ti-list-off"></i><p>No entries match.</p></div></td></tr>';return;}
+  tb.innerHTML=page.map(r=>{const s=getAS(r.action);return`<tr>
+    <td><div style="width:28px;height:28px;border-radius:50%;background:${s.b};color:${s.c};display:flex;align-items:center;justify-content:center;font-size:13px"><i class="ti ${s.i}"></i></div></td>
+    <td style="font-weight:500;font-size:12.5px">${r.action}</td>
+    <td><div class="text-sm">${r.username||'—'}</div></td>
+    <td class="text-xs text-muted">${(r.date||'').replace('T',' ').slice(0,19)}</td>
+    <td class="mono text-xs text-muted">${r.ip||'—'}</td>
+  </tr>`;}).join('');
+}
+function filterAudit(){const q=document.getElementById('audit-search')?.value.toLowerCase();_filteredAudit=_allAudit.filter(r=>!q||(r.action||'').toLowerCase().includes(q)||(r.username||'').toLowerCase().includes(q));_auditPage=1;renderAuditPage();}
+function auditPrev(){if(_auditPage>1){_auditPage--;renderAuditPage();}}
+function auditNext(){const m=Math.ceil(_filteredAudit.length/AUDIT_PS)||1;if(_auditPage<m){_auditPage++;renderAuditPage();}}
+function exportAuditCsv(){if(!_allAudit.length){alert('No data.');return;}downloadCsv(['Action','User','Date','IP'],_allAudit.map(r=>[r.action,r.username,(r.date||'').replace('T',' ').slice(0,19),r.ip]),'audit_'+new Date().toISOString().slice(0,10));}
+</script>
+</body>
+</html>
